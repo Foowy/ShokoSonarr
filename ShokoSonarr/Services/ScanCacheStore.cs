@@ -98,23 +98,6 @@ public class ScanCacheStore : IDisposable
         col.DeleteMany(p => p.ShokoSeriesId == shokoSeriesId && p.AnidbEpisodeId == anidbEpisodeId);
     }
 
-    /// <summary>Updates the action status for a single episode within the currently stored scan snapshot, if present.</summary>
-    public void MarkEpisodeActionStatus(int shokoSeriesId, int anidbEpisodeId, string status)
-    {
-        var col = _db.GetCollection<ScanDocument>(ScanCollectionName);
-        var doc = col.FindById(ScanDocumentId);
-        if (doc is null)
-            return;
-
-        var series = doc.Snapshot.Series.Find(s => s.ShokoSeriesId == shokoSeriesId);
-        var episode = series?.MissingEpisodes.Find(e => e.AnidbEpisodeId == anidbEpisodeId);
-        if (episode is null)
-            return;
-
-        episode.ActionStatus = status;
-        col.Update(doc);
-    }
-
     private class SettingsDocument
     {
         public int Id { get; set; }

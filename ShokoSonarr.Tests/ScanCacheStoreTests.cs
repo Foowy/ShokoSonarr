@@ -81,30 +81,6 @@ public class ScanCacheStoreTests : IDisposable
     }
 
     [Fact]
-    public void MarkEpisodeActionStatus_UpdatesStatusInStoredSnapshot()
-    {
-        var snapshot = new ScanSnapshot
-        {
-            ScannedAtUtc = DateTime.UtcNow,
-            Series =
-            [
-                new SeriesMissingResult
-                {
-                    ShokoSeriesId = 42,
-                    Title = "One Piece",
-                    MissingEpisodes = [new MissingEpisodeInfo { AnidbEpisodeId = 1001, EpisodeNumber = 1085 }],
-                },
-            ],
-        };
-        _store.SaveScan(snapshot);
-
-        _store.MarkEpisodeActionStatus(shokoSeriesId: 42, anidbEpisodeId: 1001, status: "search-triggered");
-
-        var loaded = _store.GetLastScan();
-        Assert.Equal("search-triggered", loaded!.Series[0].MissingEpisodes[0].ActionStatus);
-    }
-
-    [Fact]
     public void GetSeriesOverride_WhenNoneSet_ReturnsNull()
     {
         Assert.Null(_store.GetSeriesOverride(42));

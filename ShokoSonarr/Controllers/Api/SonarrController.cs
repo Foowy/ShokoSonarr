@@ -97,6 +97,7 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
         // to Sonarr episode IDs by season/episode number.
         var targetEpisodes = series.MissingEpisodes.Where(e => anidbEpisodeIds.Contains(e.AnidbEpisodeId)).ToList();
         var sonarrEpisodeIds = new List<int>();
+        var sonarrEpisodeIdByAnidbId = new Dictionary<int, int>();
         var unmappedIds = new List<int>();
         var unmappedTitles = new List<string>();
         foreach (var ep in targetEpisodes)
@@ -111,6 +112,7 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
             else
             {
                 sonarrEpisodeIds.Add(match.Id);
+                sonarrEpisodeIdByAnidbId[ep.AnidbEpisodeId] = match.Id;
             }
         }
 
@@ -126,7 +128,16 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
             return Conflict(new ApiResponse<object>(Success: false, Message: searchResult.ErrorMessage, Data: null));
 
         foreach (var ep in targetEpisodes.Where(e => !unmappedIds.Contains(e.AnidbEpisodeId)))
-            cacheStore.MarkEpisodeActionStatus(shokoSeriesId, ep.AnidbEpisodeId, "search-triggered");
+        {
+            cacheStore.AddPendingSearch(new Models.PendingSearch
+            {
+                ShokoSeriesId = shokoSeriesId,
+                AnidbEpisodeId = ep.AnidbEpisodeId,
+                SonarrSeriesId = sonarrSeriesId,
+                SonarrEpisodeId = sonarrEpisodeIdByAnidbId[ep.AnidbEpisodeId],
+                TriggeredAtUtc = DateTime.UtcNow,
+            });
+        }
 
         var message = unmappedTitles.Count > 0 ? $"Search triggered. Unmapped episodes skipped: {string.Join(", ", unmappedTitles)}" : null;
         return Ok(new ApiResponse<object>(Success: true, Message: message, Data: null));
