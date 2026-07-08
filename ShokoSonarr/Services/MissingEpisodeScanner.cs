@@ -6,14 +6,13 @@ using ShokoSonarr.Models;
 namespace ShokoSonarr.Services;
 
 /// <summary>Scans the Shoko collection for missing episodes on already-inventoried series.</summary>
-public class MissingEpisodeScanner(IMetadataService metadataService)
+public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheStore cacheStore)
 {
-    private static readonly EpisodeType[] s_scannedTypes = [EpisodeType.Episode, EpisodeType.Special];
-
     /// <summary>Runs a full scan and returns a snapshot of all series with at least one missing episode.</summary>
-    public ScanSnapshot Scan()
+    public Task<ScanSnapshot> ScanAsync()
     {
         var results = new List<SeriesMissingResult>();
+        var globalIncludeSpecials = cacheStore.GetSettings().IncludeSpecials;
 
         foreach (var series in metadataService.GetAllShokoSeries())
         {
@@ -21,8 +20,14 @@ public class MissingEpisodeScanner(IMetadataService metadataService)
             if (series.LocalEpisodeCounts.Episodes + series.LocalEpisodeCounts.Specials <= 0)
                 continue;
 
+            var overrideValue = cacheStore.GetSeriesOverride(series.ID)?.IncludeSpecials;
+            var includeSpecials = overrideValue ?? globalIncludeSpecials;
+            var scannedTypes = includeSpecials
+                ? new[] { EpisodeType.Episode, EpisodeType.Special }
+                : [EpisodeType.Episode];
+
             var missing = series.Episodes
-                .Where(e => s_scannedTypes.Contains(e.Type) && !e.IsHidden && e.VideoList.Count == 0)
+                .Where(e => scannedTypes.Contains(e.Type) && !e.IsHidden && e.VideoList.Count == 0)
                 .Select(e => new MissingEpisodeInfo
                 {
                     AnidbEpisodeId = e.AnidbEpisodeID,
@@ -46,14 +51,15 @@ public class MissingEpisodeScanner(IMetadataService metadataService)
                 ShokoSeriesId = series.ID,
                 Title = series.Title,
                 TvdbId = tvdbId,
+                IncludeSpecialsOverride = overrideValue,
                 MissingEpisodes = missing,
             });
         }
 
-        return new ScanSnapshot
+        return Task.FromResult(new ScanSnapshot
         {
             ScannedAtUtc = DateTime.UtcNow,
             Series = [.. results.OrderByDescending(s => s.MissingEpisodes.Count)],
-        };
+        });
     }
 }

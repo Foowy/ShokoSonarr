@@ -9,9 +9,9 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
     /// <summary>Runs a missing-episode scan immediately and persists the result as the current snapshot.</summary>
     /// <returns>The freshly computed scan snapshot.</returns>
     [HttpPost]
-    public IActionResult RunScan()
+    public async Task<IActionResult> RunScan()
     {
-        var snapshot = scanner.Scan();
+        var snapshot = await scanner.ScanAsync();
         cacheStore.SaveScan(snapshot);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }
