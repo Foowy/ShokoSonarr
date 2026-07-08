@@ -20,6 +20,8 @@ dotnet test
 
 Copy the built plugin output into your Shoko Server plugins directory, or install via Shoko's plugin manager once a manifest/release is published.
 
-## Configuration
+## Dashboard
 
-Open the "Missing Episodes" page from Shoko's WebUI plugin pages list, click Settings, and enter your Sonarr base URL and API key (found in Sonarr under Settings > General).
+Open the "Missing Episodes" page from Shoko's WebUI plugin pages list, or go directly to `http://<your-shoko-host>:<port>/api/plugin/ShokoSonarr/dashboard`.
+
+Click Settings and enter your Sonarr base URL and API key (found in Sonarr under Settings > General), then Test Connection to populate the Quality Profile and Root Folder dropdowns before saving. The Sonarr base URL must be directly reachable from the Shoko host — if Sonarr sits behind a reverse proxy with authentication (e.g. an SSO forward-auth layer), use Sonarr's internal address instead, since API-key requests won't pass through an SSO login redirect.
