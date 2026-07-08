@@ -45,6 +45,16 @@ public class ScanCacheStoreTests : IDisposable
     }
 
     [Fact]
+    public void SaveSettings_ThenGetSettings_RoundTripsIncludeSpecials()
+    {
+        _store.SaveSettings(new SonarrSettings { IncludeSpecials = false });
+
+        var settings = _store.GetSettings();
+
+        Assert.False(settings.IncludeSpecials);
+    }
+
+    [Fact]
     public void SaveScan_ThenGetLastScan_RoundTrips()
     {
         var snapshot = new ScanSnapshot

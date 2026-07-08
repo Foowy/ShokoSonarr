@@ -20,6 +20,7 @@ public class SettingsController(ScanCacheStore cacheStore, SonarrClient sonarrCl
             ScanIntervalHours = settings.ScanIntervalHours,
             QualityProfileId = settings.QualityProfileId,
             RootFolderPath = settings.RootFolderPath,
+            IncludeSpecials = settings.IncludeSpecials,
         };
         return Ok(new ApiResponse<SonarrSettings>(Success: true, Message: null, Data: masked));
     }
