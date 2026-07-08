@@ -12,6 +12,7 @@ public class ScanCacheStore : IDisposable
 {
     private const string SettingsCollectionName = "settings";
     private const string ScanCollectionName = "scans";
+    private const string SeriesOverridesCollectionName = "seriesOverrides";
     private const int SettingsDocumentId = 1;
     private const int ScanDocumentId = 1;
 
@@ -56,6 +57,22 @@ public class ScanCacheStore : IDisposable
     {
         var col = _db.GetCollection<ScanDocument>(ScanCollectionName);
         col.Upsert(new ScanDocument { Id = ScanDocumentId, Snapshot = snapshot });
+    }
+
+    /// <summary>Gets the specials override for a series, or null if no override is set (inherit the global default).</summary>
+    public SeriesOverride? GetSeriesOverride(int shokoSeriesId)
+    {
+        var col = _db.GetCollection<SeriesOverride>(SeriesOverridesCollectionName);
+        return col.Find(o => o.ShokoSeriesId == shokoSeriesId).FirstOrDefault();
+    }
+
+    /// <summary>Sets (or clears, when <paramref name="includeSpecials"/> is null) the specials override for a series.</summary>
+    public void SetSeriesOverride(int shokoSeriesId, bool? includeSpecials)
+    {
+        var col = _db.GetCollection<SeriesOverride>(SeriesOverridesCollectionName);
+        col.DeleteMany(o => o.ShokoSeriesId == shokoSeriesId);
+        if (includeSpecials is not null)
+            col.Insert(new SeriesOverride { ShokoSeriesId = shokoSeriesId, IncludeSpecials = includeSpecials });
     }
 
     /// <summary>Updates the action status for a single episode within the currently stored scan snapshot, if present.</summary>

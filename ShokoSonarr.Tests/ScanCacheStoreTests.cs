@@ -103,4 +103,43 @@ public class ScanCacheStoreTests : IDisposable
         var loaded = _store.GetLastScan();
         Assert.Equal("search-triggered", loaded!.Series[0].MissingEpisodes[0].ActionStatus);
     }
+
+    [Fact]
+    public void GetSeriesOverride_WhenNoneSet_ReturnsNull()
+    {
+        Assert.Null(_store.GetSeriesOverride(42));
+    }
+
+    [Fact]
+    public void SetSeriesOverride_ThenGetSeriesOverride_RoundTrips()
+    {
+        _store.SetSeriesOverride(42, includeSpecials: false);
+
+        var result = _store.GetSeriesOverride(42);
+
+        Assert.NotNull(result);
+        Assert.False(result!.IncludeSpecials);
+    }
+
+    [Fact]
+    public void SetSeriesOverride_WithNull_ClearsAnyExistingOverride()
+    {
+        _store.SetSeriesOverride(42, includeSpecials: true);
+
+        _store.SetSeriesOverride(42, includeSpecials: null);
+
+        Assert.Null(_store.GetSeriesOverride(42));
+    }
+
+    [Fact]
+    public void SetSeriesOverride_CalledTwice_ReplacesRatherThanDuplicates()
+    {
+        _store.SetSeriesOverride(42, includeSpecials: true);
+        _store.SetSeriesOverride(42, includeSpecials: false);
+
+        var result = _store.GetSeriesOverride(42);
+
+        Assert.NotNull(result);
+        Assert.False(result!.IncludeSpecials);
+    }
 }
