@@ -246,6 +246,21 @@ button.primary:hover { background: var(--amber-dim); color: var(--ink); }
   font-style: italic;
 }
 
+.specials-toggle {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 0.75rem;
+}
+.specials-toggle button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.68rem;
+}
+.specials-toggle button.active {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--amber-dim);
+}
+
 #series-list > .empty {
   font-family: var(--mono);
   color: var(--ink-faint);

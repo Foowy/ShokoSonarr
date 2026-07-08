@@ -91,6 +91,19 @@ function renderSeries(snapshot) {
       label.textContent = 'No Sonarr match available';
       rowActions.appendChild(label);
     }
+
+    const specialsToggle = document.createElement('div');
+    specialsToggle.className = 'specials-toggle';
+    const currentOverride = series.IncludeSpecialsOverride === null || series.IncludeSpecialsOverride === undefined
+      ? 'default' : String(series.IncludeSpecialsOverride);
+    for (const [key, label, value] of [['default', 'Default', null], ['true', 'Include', true], ['false', 'Exclude', false]]) {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      if (key === currentOverride) btn.classList.add('active');
+      btn.onclick = (e) => { e.stopPropagation(); setSpecialsOverride(series.ShokoSeriesId, value); };
+      specialsToggle.appendChild(btn);
+    }
+    rowActions.appendChild(specialsToggle);
     row.appendChild(rowActions);
 
     container.appendChild(row);
@@ -107,6 +120,14 @@ async function addAndSearch(series) {
   await loadScanResults();
 }
 
+async function setSpecialsOverride(shokoSeriesId, includeSpecials) {
+  const result = await fetchJson(`/Scan/series/${shokoSeriesId}/include-specials`, {
+    method: 'PUT',
+    body: JSON.stringify({ includeSpecials }),
+  });
+  renderSeries(result);
+}
+
 async function loadScanResults() {
   const result = await fetchJson('/Scan/results');
   renderSeries(result);
@@ -120,6 +141,7 @@ function currentSettingsForm() {
     baseUrl: document.getElementById('settings-url').value,
     apiKey: document.getElementById('settings-key').value,
     scanIntervalHours: Number(document.getElementById('settings-interval').value),
+    includeSpecials: document.getElementById('settings-include-specials').checked,
   };
 }
 
@@ -150,6 +172,7 @@ async function loadSettings() {
   const result = await fetchJson('/Settings');
   document.getElementById('settings-url').value = result.Data.BaseUrl || '';
   document.getElementById('settings-interval').value = result.Data.ScanIntervalHours;
+  document.getElementById('settings-include-specials').checked = result.Data.IncludeSpecials;
   savedQualityProfileId = result.Data.QualityProfileId;
   savedRootFolderPath = result.Data.RootFolderPath;
   populateSelect('settings-quality-profile', savedQualityProfileId ? [{ Id: savedQualityProfileId, Name: `#${savedQualityProfileId}` }] : [], 'Id', 'Name', savedQualityProfileId);
