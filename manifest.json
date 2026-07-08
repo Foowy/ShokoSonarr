@@ -11,34 +11,5 @@
     "missing-episodes"
   ],
   "image_url": null,
-  "releases": [
-    {
-      "version": "0.1.1-test",
-      "tag": "v0.1.1-test",
-      "source_revision": "e60c509908ca98c4800bb95d172bc641027ebc5f",
-      "released_at": "2026-07-08T22:13:47Z",
-      "channel": "Dev",
-      "release_notes": "Manifest pipeline dry run — safe to delete.",
-      "archives": [
-        {
-          "runtime": "linux-arm64",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/Foowy/shoko_sonarr/releases/download/v0.1.1-test/ShokoSonarr-v0.1.1-test-dev_linux-arm64.zip",
-          "checksum": "7bb8f7623da1e4e394e84bd03e260d43cc7dab2687d03c6c413fee4cb2caaf0f"
-        },
-        {
-          "runtime": "linux-x64",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/Foowy/shoko_sonarr/releases/download/v0.1.1-test/ShokoSonarr-v0.1.1-test-dev_linux-x64.zip",
-          "checksum": "fb630ac6906626d6b10a99f9c713afeae58f415a89655ed42fef44ea24434912"
-        },
-        {
-          "runtime": "win-x64",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/Foowy/shoko_sonarr/releases/download/v0.1.1-test/ShokoSonarr-v0.1.1-test-dev_win-x64.zip",
-          "checksum": "700f38df002e9ce063d396c9227a19c9393112a83d015092baabb6743d1cfae9"
-        }
-      ]
-    }
-  ]
+  "releases": []
 }
