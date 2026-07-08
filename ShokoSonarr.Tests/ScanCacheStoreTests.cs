@@ -45,6 +45,16 @@ public class ScanCacheStoreTests : IDisposable
     }
 
     [Fact]
+    public void SaveSettings_ThenGetSettings_RoundTripsIncludeSpecials()
+    {
+        _store.SaveSettings(new SonarrSettings { IncludeSpecials = false });
+
+        var settings = _store.GetSettings();
+
+        Assert.False(settings.IncludeSpecials);
+    }
+
+    [Fact]
     public void SaveScan_ThenGetLastScan_RoundTrips()
     {
         var snapshot = new ScanSnapshot
@@ -71,26 +81,90 @@ public class ScanCacheStoreTests : IDisposable
     }
 
     [Fact]
-    public void MarkEpisodeActionStatus_UpdatesStatusInStoredSnapshot()
+    public void GetSeriesOverride_WhenNoneSet_ReturnsNull()
     {
-        var snapshot = new ScanSnapshot
+        Assert.Null(_store.GetSeriesOverride(42));
+    }
+
+    [Fact]
+    public void SetSeriesOverride_ThenGetSeriesOverride_RoundTrips()
+    {
+        _store.SetSeriesOverride(42, includeSpecials: false);
+
+        var result = _store.GetSeriesOverride(42);
+
+        Assert.NotNull(result);
+        Assert.False(result!.IncludeSpecials);
+    }
+
+    [Fact]
+    public void SetSeriesOverride_WithNull_ClearsAnyExistingOverride()
+    {
+        _store.SetSeriesOverride(42, includeSpecials: true);
+
+        _store.SetSeriesOverride(42, includeSpecials: null);
+
+        Assert.Null(_store.GetSeriesOverride(42));
+    }
+
+    [Fact]
+    public void SetSeriesOverride_CalledTwice_ReplacesRatherThanDuplicates()
+    {
+        _store.SetSeriesOverride(42, includeSpecials: true);
+        _store.SetSeriesOverride(42, includeSpecials: false);
+
+        var result = _store.GetSeriesOverride(42);
+
+        Assert.NotNull(result);
+        Assert.False(result!.IncludeSpecials);
+    }
+
+    [Fact]
+    public void GetPendingSearches_WhenNoneAdded_ReturnsEmpty()
+    {
+        Assert.Empty(_store.GetPendingSearches());
+    }
+
+    [Fact]
+    public void AddPendingSearch_ThenGetPendingSearches_RoundTrips()
+    {
+        _store.AddPendingSearch(new PendingSearch
         {
-            ScannedAtUtc = DateTime.UtcNow,
-            Series =
-            [
-                new SeriesMissingResult
-                {
-                    ShokoSeriesId = 42,
-                    Title = "One Piece",
-                    MissingEpisodes = [new MissingEpisodeInfo { AnidbEpisodeId = 1001, EpisodeNumber = 1085 }],
-                },
-            ],
-        };
-        _store.SaveScan(snapshot);
+            ShokoSeriesId = 42,
+            AnidbEpisodeId = 1001,
+            SonarrSeriesId = 55,
+            SonarrEpisodeId = 999,
+            TriggeredAtUtc = new DateTime(2026, 7, 8, 12, 0, 0, DateTimeKind.Utc),
+        });
 
-        _store.MarkEpisodeActionStatus(shokoSeriesId: 42, anidbEpisodeId: 1001, status: "search-triggered");
+        var pending = _store.GetPendingSearches();
 
-        var loaded = _store.GetLastScan();
-        Assert.Equal("search-triggered", loaded!.Series[0].MissingEpisodes[0].ActionStatus);
+        Assert.Single(pending);
+        Assert.Equal(42, pending[0].ShokoSeriesId);
+        Assert.Equal(1001, pending[0].AnidbEpisodeId);
+        Assert.Equal(55, pending[0].SonarrSeriesId);
+        Assert.Equal(999, pending[0].SonarrEpisodeId);
+    }
+
+    [Fact]
+    public void AddPendingSearch_CalledTwiceForSameKey_ReplacesRatherThanDuplicates()
+    {
+        _store.AddPendingSearch(new PendingSearch { ShokoSeriesId = 42, AnidbEpisodeId = 1001, SonarrSeriesId = 55, SonarrEpisodeId = 999, TriggeredAtUtc = DateTime.UtcNow });
+        _store.AddPendingSearch(new PendingSearch { ShokoSeriesId = 42, AnidbEpisodeId = 1001, SonarrSeriesId = 55, SonarrEpisodeId = 1000, TriggeredAtUtc = DateTime.UtcNow });
+
+        var pending = _store.GetPendingSearches();
+
+        Assert.Single(pending);
+        Assert.Equal(1000, pending[0].SonarrEpisodeId);
+    }
+
+    [Fact]
+    public void RemovePendingSearch_RemovesMatchingEntry()
+    {
+        _store.AddPendingSearch(new PendingSearch { ShokoSeriesId = 42, AnidbEpisodeId = 1001, SonarrSeriesId = 55, SonarrEpisodeId = 999, TriggeredAtUtc = DateTime.UtcNow });
+
+        _store.RemovePendingSearch(42, 1001);
+
+        Assert.Empty(_store.GetPendingSearches());
     }
 }

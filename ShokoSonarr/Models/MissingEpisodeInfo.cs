@@ -18,6 +18,6 @@ public class MissingEpisodeInfo
     /// <summary>The date the episode aired, if known.</summary>
     public DateOnly? AirDate { get; set; }
 
-    /// <summary>Current action status: "none", "monitored", or "search-triggered".</summary>
+    /// <summary>Current action status: "none", or "search-triggered" if a pending Sonarr search is recorded for this episode (see <see cref="Services.ScanCacheStore.GetPendingSearches"/>).</summary>
     public string ActionStatus { get; set; } = "none";
 }

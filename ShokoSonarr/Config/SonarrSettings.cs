@@ -17,4 +17,7 @@ public class SonarrSettings
 
     /// <summary>Sonarr root folder path to use when adding new series. Must be set before series can be added.</summary>
     public string? RootFolderPath { get; set; }
+
+    /// <summary>Whether to include specials when scanning for missing episodes, unless a series has its own override. Defaults to true (matches pre-existing behavior).</summary>
+    public bool IncludeSpecials { get; set; } = true;
 }

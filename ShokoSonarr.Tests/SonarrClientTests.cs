@@ -159,6 +159,20 @@ public class SonarrClientTests
     }
 
     [Fact]
+    public async Task UnmonitorEpisodesAsync_SendsCorrectEpisodeIdsAndMonitoredFalse()
+    {
+        var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.Accepted) { Content = new StringContent("{}") });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.UnmonitorEpisodesAsync(TestSettings, [100, 101]);
+
+        Assert.True(result.Success);
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        Assert.Equal(2, body.RootElement.GetProperty("episodeIds").GetArrayLength());
+        Assert.False(body.RootElement.GetProperty("monitored").GetBoolean());
+    }
+
+    [Fact]
     public async Task TriggerEpisodeSearchAsync_SendsEpisodeSearchCommand()
     {
         var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.Created) { Content = new StringContent("{}") });

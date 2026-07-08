@@ -37,7 +37,7 @@ public class ScanSchedulerService(ISystemService systemService, MissingEpisodeSc
                 if (DateTime.UtcNow >= dueAt)
                 {
                     s_logger.Info("ShokoSonarr: running scheduled missing-episode scan.");
-                    var snapshot = scanner.Scan();
+                    var snapshot = await scanner.ScanAsync().ConfigureAwait(false);
                     cacheStore.SaveScan(snapshot);
                     dueAt = DateTime.UtcNow.AddHours(intervalHours);
                 }

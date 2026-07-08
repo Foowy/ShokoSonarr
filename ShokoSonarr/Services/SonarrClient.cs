@@ -116,6 +116,14 @@ public class SonarrClient(HttpClient httpClient)
         return SendAsync<bool>(request, ct);
     }
 
+    /// <summary>Sets the given episodes to unmonitored, without touching any other episode's monitored state. Used to reconcile episodes Shoko has already imported so Sonarr's own automatic/RSS search stops re-fetching them.</summary>
+    public Task<SonarrActionResult<bool>> UnmonitorEpisodesAsync(SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default)
+    {
+        var request = BuildRequest(HttpMethod.Put, settings, "/api/v3/episode/monitor");
+        request.Content = JsonContent.Create(new { episodeIds = sonarrEpisodeIds, monitored = false }, options: s_jsonOptions);
+        return SendAsync<bool>(request, ct);
+    }
+
     /// <summary>Triggers Sonarr's EpisodeSearch command for the given episodes.</summary>
     public Task<SonarrActionResult<bool>> TriggerEpisodeSearchAsync(SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default)
     {

@@ -12,6 +12,8 @@ public class ScanCacheStore : IDisposable
 {
     private const string SettingsCollectionName = "settings";
     private const string ScanCollectionName = "scans";
+    private const string SeriesOverridesCollectionName = "seriesOverrides";
+    private const string PendingSearchesCollectionName = "pendingSearches";
     private const int SettingsDocumentId = 1;
     private const int ScanDocumentId = 1;
 
@@ -58,21 +60,42 @@ public class ScanCacheStore : IDisposable
         col.Upsert(new ScanDocument { Id = ScanDocumentId, Snapshot = snapshot });
     }
 
-    /// <summary>Updates the action status for a single episode within the currently stored scan snapshot, if present.</summary>
-    public void MarkEpisodeActionStatus(int shokoSeriesId, int anidbEpisodeId, string status)
+    /// <summary>Gets the specials override for a series, or null if no override is set (inherit the global default).</summary>
+    public SeriesOverride? GetSeriesOverride(int shokoSeriesId)
     {
-        var col = _db.GetCollection<ScanDocument>(ScanCollectionName);
-        var doc = col.FindById(ScanDocumentId);
-        if (doc is null)
-            return;
+        var col = _db.GetCollection<SeriesOverride>(SeriesOverridesCollectionName);
+        return col.Find(o => o.ShokoSeriesId == shokoSeriesId).FirstOrDefault();
+    }
 
-        var series = doc.Snapshot.Series.Find(s => s.ShokoSeriesId == shokoSeriesId);
-        var episode = series?.MissingEpisodes.Find(e => e.AnidbEpisodeId == anidbEpisodeId);
-        if (episode is null)
-            return;
+    /// <summary>Sets (or clears, when <paramref name="includeSpecials"/> is null) the specials override for a series.</summary>
+    public void SetSeriesOverride(int shokoSeriesId, bool? includeSpecials)
+    {
+        var col = _db.GetCollection<SeriesOverride>(SeriesOverridesCollectionName);
+        col.DeleteMany(o => o.ShokoSeriesId == shokoSeriesId);
+        if (includeSpecials is not null)
+            col.Insert(new SeriesOverride { ShokoSeriesId = shokoSeriesId, IncludeSpecials = includeSpecials });
+    }
 
-        episode.ActionStatus = status;
-        col.Update(doc);
+    /// <summary>Records that an episode's search was triggered in Sonarr, replacing any existing pending entry for the same episode.</summary>
+    public void AddPendingSearch(PendingSearch entry)
+    {
+        var col = _db.GetCollection<PendingSearch>(PendingSearchesCollectionName);
+        col.DeleteMany(p => p.ShokoSeriesId == entry.ShokoSeriesId && p.AnidbEpisodeId == entry.AnidbEpisodeId);
+        col.Insert(entry);
+    }
+
+    /// <summary>Gets all episodes currently pending reconciliation with Sonarr.</summary>
+    public List<PendingSearch> GetPendingSearches()
+    {
+        var col = _db.GetCollection<PendingSearch>(PendingSearchesCollectionName);
+        return col.FindAll().ToList();
+    }
+
+    /// <summary>Removes a pending search entry once it's been reconciled (or is being replaced — see <see cref="AddPendingSearch"/>).</summary>
+    public void RemovePendingSearch(int shokoSeriesId, int anidbEpisodeId)
+    {
+        var col = _db.GetCollection<PendingSearch>(PendingSearchesCollectionName);
+        col.DeleteMany(p => p.ShokoSeriesId == shokoSeriesId && p.AnidbEpisodeId == anidbEpisodeId);
     }
 
     private class SettingsDocument

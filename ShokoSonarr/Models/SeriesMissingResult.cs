@@ -15,6 +15,9 @@ public class SeriesMissingResult
     /// <summary>The resolved Sonarr TVDB ID, if a match was found (via TMDB link or confirmed title search). Null if no Sonarr match exists yet.</summary>
     public int? TvdbId { get; set; }
 
+    /// <summary>This series' specials override, if one is set (null means it inherits the global default). Mirrors <see cref="Services.ScanCacheStore.GetSeriesOverride"/> for the dashboard to render the current state without a separate call.</summary>
+    public bool? IncludeSpecialsOverride { get; set; }
+
     /// <summary>The list of missing episodes for this series.</summary>
     public List<MissingEpisodeInfo> MissingEpisodes { get; set; } = [];
 }
