@@ -1,5 +1,7 @@
 # Shoko Sonarr
 
+<img src="assets/master_shokosonarr.png" width="200" alt="Shoko Sonarr logo">
+
 [![CI](https://github.com/Foowy/shoko_sonarr/actions/workflows/ci.yml/badge.svg)](https://github.com/Foowy/shoko_sonarr/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
