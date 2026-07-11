@@ -35,10 +35,12 @@ public class DashboardController : ControllerBase
     [HttpGet("dashboard/{*path}")]
     public IActionResult GetAssetFile([FromRoute] string path)
     {
-        var safePath = path.Replace('/', Path.DirectorySeparatorChar);
-        var requested = Path.GetFullPath(Path.Combine(s_dashboardDir, safePath));
-        var dashboardDirWithSeparator = Path.GetFullPath(s_dashboardDir) + Path.DirectorySeparatorChar;
-        if (!requested.StartsWith(dashboardDirWithSeparator, StringComparison.OrdinalIgnoreCase) || !IoFile.Exists(requested))
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Any(s => s is "." or ".." || s.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0))
+            return NotFound();
+
+        var requested = Path.GetFullPath(Path.Combine([s_dashboardDir, .. segments]));
+        if (!IoFile.Exists(requested))
             return NotFound();
 
         if (!s_contentTypeProvider.TryGetContentType(requested, out var contentType))
