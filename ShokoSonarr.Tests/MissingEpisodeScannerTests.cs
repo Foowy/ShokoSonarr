@@ -236,7 +236,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { BaseUrl = "http://sonarr.local:8989", ApiKey = "key" });
-        _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 20, AnidbEpisodeId = 9000, SonarrSeriesId = 55, SonarrEpisodeId = 777, TriggeredAtUtc = DateTime.UtcNow });
+        _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 20, SeriesTitle = "Some Series", AnidbEpisodeId = 9000, EpisodeTitle = "Episode 1", SonarrSeriesId = 55, SonarrEpisodeId = 777, TriggeredAtUtc = DateTime.UtcNow });
 
         var handler = new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Accepted) { Content = new StringContent("{}") });
         var sonarrClient = new SonarrClient(new HttpClient(handler));
@@ -249,6 +249,12 @@ public class MissingEpisodeScannerTests : IDisposable
         var body = await handler.Requests[0].Content!.ReadAsStringAsync();
         Assert.Contains("\"monitored\":false", body);
         Assert.Contains("777", body);
+
+        var history = _cacheStore.GetHistory();
+        Assert.Single(history);
+        Assert.Equal(SearchHistoryOutcome.Imported, history[0].Outcome);
+        Assert.Equal("Some Series", history[0].SeriesTitle);
+        Assert.Equal("Episode 1", history[0].EpisodeTitle);
     }
 
     [Fact]
@@ -439,7 +445,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { BaseUrl = "http://sonarr.local:8989", ApiKey = "key" });
-        _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 25, AnidbEpisodeId = 9005, SonarrSeriesId = 55, SonarrEpisodeId = 782, TriggeredAtUtc = DateTime.UtcNow.AddDays(-15) });
+        _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 25, SeriesTitle = "Expiring Series", AnidbEpisodeId = 9005, EpisodeTitle = "Episode 1", SonarrSeriesId = 55, SonarrEpisodeId = 782, TriggeredAtUtc = DateTime.UtcNow.AddDays(-15) });
 
         var handler = new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError) { Content = new StringContent("boom") });
         var sonarrClient = new SonarrClient(new HttpClient(handler));
@@ -449,6 +455,11 @@ public class MissingEpisodeScannerTests : IDisposable
 
         Assert.Null(exception);
         Assert.Empty(_cacheStore.GetPendingSearches());
+
+        var history = _cacheStore.GetHistory();
+        Assert.Single(history);
+        Assert.Equal(SearchHistoryOutcome.Expired, history[0].Outcome);
+        Assert.Equal("Expiring Series", history[0].SeriesTitle);
     }
 
     [Fact]

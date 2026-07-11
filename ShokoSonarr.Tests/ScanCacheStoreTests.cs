@@ -198,4 +198,67 @@ public class ScanCacheStoreTests : IDisposable
 
         Assert.Empty(_store.GetPendingSearches());
     }
+
+    [Fact]
+    public void GetHistory_WhenNoneAdded_ReturnsEmpty()
+    {
+        Assert.Empty(_store.GetHistory());
+    }
+
+    [Fact]
+    public void AddHistoryEntry_ThenGetHistory_RoundTrips()
+    {
+        _store.AddHistoryEntry(new SearchHistoryEntry
+        {
+            ShokoSeriesId = 42,
+            SeriesTitle = "Some Series",
+            AnidbEpisodeId = 1001,
+            EpisodeTitle = "Episode 1",
+            Outcome = SearchHistoryOutcome.Triggered,
+            TimestampUtc = DateTime.UtcNow,
+        });
+
+        var history = _store.GetHistory();
+
+        Assert.Single(history);
+        Assert.Equal("Some Series", history[0].SeriesTitle);
+        Assert.Equal(SearchHistoryOutcome.Triggered, history[0].Outcome);
+    }
+
+    [Fact]
+    public void GetHistory_ReturnsNewestFirst()
+    {
+        var older = DateTime.UtcNow.AddMinutes(-10);
+        var newer = DateTime.UtcNow;
+        _store.AddHistoryEntry(new SearchHistoryEntry { ShokoSeriesId = 1, AnidbEpisodeId = 1, Outcome = SearchHistoryOutcome.Triggered, TimestampUtc = older });
+        _store.AddHistoryEntry(new SearchHistoryEntry { ShokoSeriesId = 2, AnidbEpisodeId = 2, Outcome = SearchHistoryOutcome.Imported, TimestampUtc = newer });
+
+        var history = _store.GetHistory();
+
+        Assert.Equal(2, history[0].ShokoSeriesId);
+        Assert.Equal(1, history[1].ShokoSeriesId);
+    }
+
+    [Fact]
+    public void AddHistoryEntry_BeyondCap_TrimsOldestEntries()
+    {
+        var baseTime = DateTime.UtcNow.AddDays(-1);
+        for (var i = 0; i < 505; i++)
+        {
+            _store.AddHistoryEntry(new SearchHistoryEntry
+            {
+                ShokoSeriesId = i,
+                AnidbEpisodeId = i,
+                Outcome = SearchHistoryOutcome.Triggered,
+                TimestampUtc = baseTime.AddSeconds(i),
+            });
+        }
+
+        var history = _store.GetHistory(limit: 1000);
+
+        Assert.True(history.Count <= 500);
+        // The oldest entries (lowest ShokoSeriesId, since they share the same insertion order as timestamp) should be gone.
+        Assert.DoesNotContain(history, h => h.ShokoSeriesId == 0);
+        Assert.Contains(history, h => h.ShokoSeriesId == 504);
+    }
 }

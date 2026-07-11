@@ -271,7 +271,9 @@ function renderPending(entries) {
     row.className = 'pending-row';
     const meta = document.createElement('span');
     meta.className = 'pending-meta';
-    meta.textContent = `Series #${entry.ShokoSeriesId} · AniDB ep ${entry.AnidbEpisodeId} · triggered ${new Date(entry.TriggeredAtUtc).toLocaleString()}`;
+    const seriesLabel = entry.SeriesTitle || `Series #${entry.ShokoSeriesId}`;
+    const episodeLabel = entry.EpisodeTitle || `AniDB ep ${entry.AnidbEpisodeId}`;
+    meta.textContent = `${seriesLabel} · ${episodeLabel} · triggered ${new Date(entry.TriggeredAtUtc).toLocaleString()}`;
     row.appendChild(meta);
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
@@ -295,6 +297,40 @@ document.getElementById('open-pending').onclick = () => {
   document.getElementById('pending-panel').classList.toggle('hidden');
   if (!document.getElementById('pending-panel').classList.contains('hidden'))
     loadPending();
+};
+
+function renderHistory(entries) {
+  const container = document.getElementById('history-list');
+  container.innerHTML = '';
+  if (!entries || entries.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'No search history yet.';
+    container.appendChild(empty);
+    return;
+  }
+  for (const entry of entries) {
+    const row = document.createElement('div');
+    row.className = 'pending-row';
+    const meta = document.createElement('span');
+    meta.className = 'pending-meta';
+    const seriesLabel = entry.SeriesTitle || `Series #${entry.ShokoSeriesId}`;
+    const episodeLabel = entry.EpisodeTitle || `AniDB ep ${entry.AnidbEpisodeId}`;
+    meta.textContent = `${entry.Outcome} · ${seriesLabel} · ${episodeLabel} · ${new Date(entry.TimestampUtc).toLocaleString()}`;
+    row.appendChild(meta);
+    container.appendChild(row);
+  }
+}
+
+async function loadHistory() {
+  const result = await fetchJson('/Scan/history');
+  renderHistory(result.Data);
+}
+
+document.getElementById('open-history').onclick = () => {
+  document.getElementById('history-panel').classList.toggle('hidden');
+  if (!document.getElementById('history-panel').classList.contains('hidden'))
+    loadHistory();
 };
 
 function setStatus(text, ok) {

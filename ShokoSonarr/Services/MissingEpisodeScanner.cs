@@ -105,6 +105,15 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
                 if (result.Success)
                 {
                     cacheStore.RemovePendingSearch(entry.ShokoSeriesId, entry.AnidbEpisodeId);
+                    cacheStore.AddHistoryEntry(new SearchHistoryEntry
+                    {
+                        ShokoSeriesId = entry.ShokoSeriesId,
+                        SeriesTitle = entry.SeriesTitle,
+                        AnidbEpisodeId = entry.AnidbEpisodeId,
+                        EpisodeTitle = entry.EpisodeTitle,
+                        Outcome = SearchHistoryOutcome.Imported,
+                        TimestampUtc = DateTime.UtcNow,
+                    });
                 }
                 else
                 {
@@ -128,5 +137,14 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
 
         s_logger.Warn("ShokoSonarr: giving up on Sonarr episode {SonarrEpisodeId} for AniDB episode {AnidbEpisodeId} after {MaxPendingAge} of failed reconciliation attempts", entry.SonarrEpisodeId, entry.AnidbEpisodeId, MaxPendingAge);
         cacheStore.RemovePendingSearch(entry.ShokoSeriesId, entry.AnidbEpisodeId);
+        cacheStore.AddHistoryEntry(new SearchHistoryEntry
+        {
+            ShokoSeriesId = entry.ShokoSeriesId,
+            SeriesTitle = entry.SeriesTitle,
+            AnidbEpisodeId = entry.AnidbEpisodeId,
+            EpisodeTitle = entry.EpisodeTitle,
+            Outcome = SearchHistoryOutcome.Expired,
+            TimestampUtc = DateTime.UtcNow,
+        });
     }
 }

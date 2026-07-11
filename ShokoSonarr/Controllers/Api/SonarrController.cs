@@ -127,15 +127,27 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
         if (!searchResult.Success)
             return Conflict(new ApiResponse<object>(Success: false, Message: searchResult.ErrorMessage, Data: null));
 
+        var triggeredAt = DateTime.UtcNow;
         foreach (var ep in targetEpisodes.Where(e => !unmappedIds.Contains(e.AnidbEpisodeId)))
         {
             cacheStore.AddPendingSearch(new Models.PendingSearch
             {
                 ShokoSeriesId = shokoSeriesId,
+                SeriesTitle = series.Title,
                 AnidbEpisodeId = ep.AnidbEpisodeId,
+                EpisodeTitle = ep.Title,
                 SonarrSeriesId = sonarrSeriesId,
                 SonarrEpisodeId = sonarrEpisodeIdByAnidbId[ep.AnidbEpisodeId],
-                TriggeredAtUtc = DateTime.UtcNow,
+                TriggeredAtUtc = triggeredAt,
+            });
+            cacheStore.AddHistoryEntry(new Models.SearchHistoryEntry
+            {
+                ShokoSeriesId = shokoSeriesId,
+                SeriesTitle = series.Title,
+                AnidbEpisodeId = ep.AnidbEpisodeId,
+                EpisodeTitle = ep.Title,
+                Outcome = Models.SearchHistoryOutcome.Triggered,
+                TimestampUtc = triggeredAt,
             });
         }
 

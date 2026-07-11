@@ -14,8 +14,12 @@ public class ScanCacheStore : IDisposable
     private const string ScanCollectionName = "scans";
     private const string SeriesOverridesCollectionName = "seriesOverrides";
     private const string PendingSearchesCollectionName = "pendingSearches";
+    private const string SearchHistoryCollectionName = "searchHistory";
     private const int SettingsDocumentId = 1;
     private const int ScanDocumentId = 1;
+
+    /// <summary>Caps the search-history log so it can't grow unbounded; oldest entries are trimmed on insert once exceeded.</summary>
+    private const int MaxHistoryEntries = 500;
 
     private readonly LiteDatabase _db;
 
@@ -96,6 +100,27 @@ public class ScanCacheStore : IDisposable
     {
         var col = _db.GetCollection<PendingSearch>(PendingSearchesCollectionName);
         col.DeleteMany(p => p.ShokoSeriesId == shokoSeriesId && p.AnidbEpisodeId == anidbEpisodeId);
+    }
+
+    /// <summary>Appends a search-history entry, trimming the oldest entries once <see cref="MaxHistoryEntries"/> is exceeded.</summary>
+    public void AddHistoryEntry(SearchHistoryEntry entry)
+    {
+        var col = _db.GetCollection<SearchHistoryEntry>(SearchHistoryCollectionName);
+        col.Insert(entry);
+
+        var overflow = col.Count() - MaxHistoryEntries;
+        if (overflow > 0)
+        {
+            var cutoff = col.FindAll().OrderBy(e => e.TimestampUtc).Skip(overflow - 1).First().TimestampUtc;
+            col.DeleteMany(e => e.TimestampUtc <= cutoff);
+        }
+    }
+
+    /// <summary>Gets the most recent search-history entries, newest first.</summary>
+    public List<SearchHistoryEntry> GetHistory(int limit = 200)
+    {
+        var col = _db.GetCollection<SearchHistoryEntry>(SearchHistoryCollectionName);
+        return col.FindAll().OrderByDescending(e => e.TimestampUtc).Take(limit).ToList();
     }
 
     private class SettingsDocument

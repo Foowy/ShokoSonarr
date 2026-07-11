@@ -67,6 +67,20 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
             return Ok(new ApiResponse<object>(Success: false, Message: $"Failed to unmonitor in Sonarr: {result.ErrorMessage}", Data: cacheStore.GetPendingSearches()));
 
         cacheStore.RemovePendingSearch(shokoSeriesId, anidbEpisodeId);
+        cacheStore.AddHistoryEntry(new Models.SearchHistoryEntry
+        {
+            ShokoSeriesId = entry.ShokoSeriesId,
+            SeriesTitle = entry.SeriesTitle,
+            AnidbEpisodeId = entry.AnidbEpisodeId,
+            EpisodeTitle = entry.EpisodeTitle,
+            Outcome = Models.SearchHistoryOutcome.Cancelled,
+            TimestampUtc = DateTime.UtcNow,
+        });
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: cacheStore.GetPendingSearches()));
     }
+
+    /// <summary>Gets the search-history log: past outcomes (imported, cancelled, expired) for episodes that were previously pending, most recent first.</summary>
+    [HttpGet("history")]
+    public IActionResult GetHistory() =>
+        Ok(new ApiResponse<object>(Success: true, Message: null, Data: cacheStore.GetHistory()));
 }
