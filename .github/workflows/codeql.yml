@@ -1,17 +1,20 @@
-name: CI
+name: CodeQL
 
 on:
   push:
     branches: [master]
   pull_request:
     branches: [master]
+  schedule:
+    - cron: "0 6 * * 1"
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  analyze:
+    name: Analyze (C#)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,14 +25,13 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Restore
-        run: dotnet restore
-
-      - name: Format check
-        run: dotnet format --verify-no-changes
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
 
       - name: Build
-        run: dotnet build --no-restore -c Release
+        run: dotnet build -c Release
 
-      - name: Test
-        run: dotnet test --no-build -c Release --logger "console;verbosity=normal"
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
