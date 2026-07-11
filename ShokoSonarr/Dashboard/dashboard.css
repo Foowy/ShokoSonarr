@@ -111,16 +111,6 @@ header h1::before {
 
 .actions { display: flex; gap: 0.5rem; align-items: center; }
 
-.theme-picker {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
 .live-refresh {
   display: flex;
   align-items: center;
@@ -130,15 +120,6 @@ header h1::before {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-faint);
-}
-
-.theme-picker select {
-  background: var(--bg-inset);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  padding: 0.3rem 0.5rem;
-  color: var(--ink);
-  font-size: 0.75rem;
 }
 
 button {
