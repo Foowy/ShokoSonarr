@@ -139,10 +139,10 @@ function renderSeries(snapshot) {
       searchBtn.onclick = () => addAndSearch(series);
       rowActions.appendChild(searchBtn);
     } else {
-      const label = document.createElement('span');
-      label.className = 'no-match-label';
-      label.textContent = 'No Sonarr match available';
-      rowActions.appendChild(label);
+      const findMatchBtn = document.createElement('button');
+      findMatchBtn.textContent = 'Find Match';
+      findMatchBtn.onclick = () => findMatchForSeries(series, rowActions, findMatchBtn);
+      rowActions.appendChild(findMatchBtn);
     }
 
     const specialsToggle = document.createElement('div');
@@ -529,6 +529,15 @@ function renderSuggestions(suggestions) {
   }
 }
 
+function renderCandidateButtons(container, candidates, onPick) {
+  for (const candidate of candidates) {
+    const btn = document.createElement('button');
+    btn.textContent = `${candidate.Title} (${candidate.Year || '?'})`;
+    btn.onclick = () => onPick(candidate);
+    container.appendChild(btn);
+  }
+}
+
 async function searchTitleForSuggestion(title, row, triggerBtn) {
   triggerBtn.disabled = true;
   triggerBtn.textContent = 'Searching…';
@@ -545,13 +554,28 @@ async function searchTitleForSuggestion(title, row, triggerBtn) {
 
   const candidates = document.createElement('div');
   candidates.className = 'suggestion-candidates';
-  for (const candidate of result.Data) {
-    const candBtn = document.createElement('button');
-    candBtn.textContent = `${candidate.Title} (${candidate.Year || '?'})`;
-    candBtn.onclick = () => addDiscoverySeries(candidate.TvdbId, candidate.Title, candidates);
-    candidates.appendChild(candBtn);
-  }
+  renderCandidateButtons(candidates, result.Data, (candidate) => addDiscoverySeries(candidate.TvdbId, candidate.Title, candidates));
   row.appendChild(candidates);
+}
+
+async function findMatchForSeries(series, container, triggerBtn) {
+  triggerBtn.disabled = true;
+  triggerBtn.textContent = 'Searching…';
+  const result = await fetchJson(`/Sonarr/match/${series.ShokoSeriesId}`);
+  triggerBtn.remove();
+
+  if (!result.Success || !result.Data.Candidates || result.Data.Candidates.length === 0) {
+    const none = document.createElement('span');
+    none.className = 'no-match-label';
+    none.textContent = 'No Sonarr match found';
+    container.appendChild(none);
+    return;
+  }
+
+  const candidates = document.createElement('div');
+  candidates.className = 'suggestion-candidates';
+  renderCandidateButtons(candidates, result.Data.Candidates, (candidate) => addAndSearch({ ...series, TvdbId: candidate.TvdbId }));
+  container.appendChild(candidates);
 }
 
 async function addDiscoverySeries(tvdbId, title, candidatesContainer) {

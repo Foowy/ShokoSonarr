@@ -390,7 +390,7 @@ button.primary:hover { background: var(--amber-dim); color: var(--ink); }
   font-size: 0.82rem;
 }
 #suggestions-list .suggestion-row:first-child { border-top: none; }
-#suggestions-list .suggestion-candidates { display: flex; gap: 0.4rem; flex-wrap: wrap; width: 100%; margin-top: 0.4rem; }
+.suggestion-candidates { display: flex; gap: 0.4rem; flex-wrap: wrap; width: 100%; margin-top: 0.4rem; }
 #suggestions-list .suggestion-candidates-empty { font-family: var(--mono); color: var(--ink-faint); font-size: 0.75rem; width: 100%; margin-top: 0.4rem; }
 #suggestions-list .empty {
   font-family: var(--mono);
