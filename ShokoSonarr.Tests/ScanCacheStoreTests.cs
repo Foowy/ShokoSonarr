@@ -333,4 +333,27 @@ public class ScanCacheStoreTests : IDisposable
         Assert.DoesNotContain(history, h => h.ShokoSeriesId == 0);
         Assert.Contains(history, h => h.ShokoSeriesId == 504);
     }
+
+    [Fact]
+    public void AddHistoryEntry_BeyondCap_WithSharedTimestamps_OnlyTrimsOldestOverflowNotWholeBatch()
+    {
+        // Simulates MonitorAndSearchAsync triggering several episodes in one call, which all get the same
+        // triggeredAt timestamp -- a timestamp-keyed cutoff would delete the entire shared-timestamp batch
+        // instead of just the oldest `overflow` entries.
+        var sharedTimestamp = DateTime.UtcNow.AddDays(-1);
+        for (var i = 0; i < 503; i++)
+        {
+            _store.AddHistoryEntry(new SearchHistoryEntry
+            {
+                ShokoSeriesId = i,
+                AnidbEpisodeId = i,
+                Outcome = SearchHistoryOutcome.Triggered,
+                TimestampUtc = sharedTimestamp,
+            });
+        }
+
+        var history = _store.GetHistory(limit: 1000);
+
+        Assert.Equal(500, history.Count);
+    }
 }

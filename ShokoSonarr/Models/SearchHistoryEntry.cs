@@ -19,6 +19,9 @@ public enum SearchHistoryOutcome
 /// <summary>A record of a search-related event for a specific episode, kept for operational visibility after a <see cref="PendingSearch"/> is resolved one way or another.</summary>
 public class SearchHistoryEntry
 {
+    /// <summary>LiteDB auto-increment primary key. Used (not <see cref="TimestampUtc"/>) to determine pruning order, since multiple entries from the same call (e.g. a multi-episode search trigger) can share an identical timestamp.</summary>
+    public int Id { get; set; }
+
     /// <summary>The Shoko series ID.</summary>
     public int ShokoSeriesId { get; set; }
 
