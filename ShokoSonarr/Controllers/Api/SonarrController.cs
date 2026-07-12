@@ -15,6 +15,15 @@ public record AddAndSearchRequest(int ShokoSeriesId, int TvdbId, List<int> Anidb
 /// <param name="AnidbEpisodeIds">The specific missing episodes (by AniDB episode ID) to monitor and search for.</param>
 public record SearchRequest(int ShokoSeriesId, int SonarrSeriesId, List<int> AnidbEpisodeIds);
 
+/// <summary>Request body for a Sonarr title search on a series not yet in Shoko's scan snapshot (e.g. a discovery suggestion).</summary>
+/// <param name="Title">The title to search for.</param>
+public record SearchTitleRequest(string Title);
+
+/// <summary>Request body for adding a wholly unowned series to Sonarr with full monitoring and an immediate search.</summary>
+/// <param name="TvdbId">The confirmed TVDB ID (from a search-title candidate the user picked).</param>
+/// <param name="Title">The series title to add.</param>
+public record AddDiscoveryRequest(int TvdbId, string Title);
+
 /// <summary>Endpoints for matching Shoko series to Sonarr and triggering add/monitor/search actions.</summary>
 public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, ScanCacheStore cacheStore, NotificationService notificationService) : ShokoSonarrBaseController
 {
@@ -32,6 +41,35 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
         var settings = cacheStore.GetSettings();
         var resolution = await matcher.ResolveAsync(settings, series);
         return Ok(new ApiResponse<object>(Success: resolution.ErrorMessage is null, Message: resolution.ErrorMessage, Data: resolution));
+    }
+
+    /// <summary>Searches Sonarr by title for a series not present in the last scan snapshot (e.g. a related-series suggestion, which has no Shoko TMDB/TVDB link to auto-resolve from).</summary>
+    /// <param name="request">The title to search for.</param>
+    /// <returns>200 with the candidate list (possibly empty), or 200 with success=false on a Sonarr error.</returns>
+    [HttpPost("search-title")]
+    public async Task<IActionResult> SearchTitle([FromBody] SearchTitleRequest request)
+    {
+        var settings = cacheStore.GetSettings();
+        var result = await matcher.SearchByTitleAsync(settings, request.Title);
+        return Ok(new ApiResponse<object>(Success: result.Success, Message: result.ErrorMessage, Data: result.Data));
+    }
+
+    /// <summary>Adds a wholly unowned series to Sonarr, fully monitored with an immediate search — used for discovery suggestions, which have no per-episode missing data to selectively monitor (unlike the owned-series add-and-search flow).</summary>
+    /// <param name="request">The confirmed TVDB ID and title to add.</param>
+    /// <returns>200 on success, 409/400 with a message describing what failed.</returns>
+    [HttpPost("add-discovery")]
+    public async Task<IActionResult> AddDiscovery([FromBody] AddDiscoveryRequest request)
+    {
+        var settings = cacheStore.GetSettings();
+        if (settings.QualityProfileId is null || string.IsNullOrEmpty(settings.RootFolderPath))
+            return BadRequest(new ApiResponse<object>(Success: false, Message: "Quality profile and root folder must be configured in Settings before adding a series.", Data: null));
+
+        var added = await sonarrClient.AddSeriesAsync(settings, request.TvdbId, request.Title, settings.QualityProfileId.Value, settings.RootFolderPath!, monitorMode: "all", searchOnAdd: true);
+        if (!added.Success)
+            return Conflict(new ApiResponse<object>(Success: false, Message: added.ErrorMessage, Data: null));
+
+        await notificationService.NotifyAsync(settings, $"Added **{request.Title}** to Sonarr (full-series discovery, monitored and searching)");
+        return Ok(new ApiResponse<object>(Success: true, Message: null, Data: null));
     }
 
     /// <summary>Adds a series to Sonarr (monitoring disabled by default), then monitors and searches for the given missing episodes.</summary>
