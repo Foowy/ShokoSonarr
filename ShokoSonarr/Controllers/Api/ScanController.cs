@@ -9,7 +9,7 @@ namespace ShokoSonarr.Controllers.Api;
 public record SetSeriesSpecialsRequest(bool? IncludeSpecials);
 
 /// <summary>Endpoints for running and reading missing-episode scans.</summary>
-public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheStore, IMetadataService metadataService, SonarrClient sonarrClient) : ShokoSonarrBaseController
+public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheStore, IMetadataService metadataService, SonarrClient sonarrClient, Services.RelatedSeriesFinder relatedSeriesFinder) : ShokoSonarrBaseController
 {
     /// <summary>Runs a missing-episode scan immediately and persists the result as the current snapshot.</summary>
     /// <returns>The freshly computed scan snapshot.</returns>
@@ -83,4 +83,9 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
     [HttpGet("history")]
     public IActionResult GetHistory() =>
         Ok(new ApiResponse<object>(Success: true, Message: null, Data: cacheStore.GetHistory()));
+
+    /// <summary>Gets AniDB-related series the user owns zero episodes of, suggested from series they do own (sequels, prequels, side stories, etc.). Computed fresh on every call — no persistence.</summary>
+    [HttpGet("related-suggestions")]
+    public IActionResult GetRelatedSuggestions() =>
+        Ok(new ApiResponse<object>(Success: true, Message: null, Data: relatedSeriesFinder.FindSuggestions()));
 }
