@@ -33,7 +33,8 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
             if (series.LocalEpisodeCounts.Episodes + series.LocalEpisodeCounts.Specials <= 0)
                 continue;
 
-            var overrideValue = cacheStore.GetSeriesOverride(series.ID)?.IncludeSpecials;
+            var seriesOverride = cacheStore.GetSeriesOverride(series.ID);
+            var overrideValue = seriesOverride?.IncludeSpecials;
             var includeSpecials = overrideValue ?? settings.IncludeSpecials;
             var scannedTypes = includeSpecials
                 ? new[] { EpisodeType.Episode, EpisodeType.Special }
@@ -72,6 +73,8 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
                 Title = series.Title,
                 TvdbId = tvdbId,
                 GroupTitle = series.ParentGroup?.Title,
+                QualityProfileIdOverride = seriesOverride?.QualityProfileId,
+                RootFolderPathOverride = seriesOverride?.RootFolderPath,
                 IncludeSpecialsOverride = overrideValue,
                 MissingEpisodes = displayMissing,
             });

@@ -119,6 +119,29 @@ public class MissingEpisodeScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task Scan_SeriesWithSonarrOverride_PopulatesOverrideFields()
+    {
+        var missingEp = MakeEpisode(anidbId: 6001, number: 1, type: EpisodeType.Episode, hidden: false, videoCount: 0);
+
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(60);
+        series.Setup(s => s.Episodes).Returns([missingEp.Object]);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+
+        _cacheStore.SetSeriesSonarrOverride(60, qualityProfileId: 9, rootFolderPath: "/4k-anime");
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        var snapshot = await scanner.ScanAsync();
+
+        Assert.Single(snapshot.Series);
+        Assert.Equal(9, snapshot.Series[0].QualityProfileIdOverride);
+        Assert.Equal("/4k-anime", snapshot.Series[0].RootFolderPathOverride);
+    }
+
+    [Fact]
     public async Task Scan_SeriesWithNoFilesAtAll_IsExcluded()
     {
         var unownedEp = MakeEpisode(anidbId: 2001, number: 1, type: EpisodeType.Episode, hidden: false, videoCount: 0);

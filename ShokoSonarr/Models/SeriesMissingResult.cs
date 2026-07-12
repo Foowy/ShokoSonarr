@@ -21,6 +21,12 @@ public class SeriesMissingResult
     /// <summary>This series' specials override, if one is set (null means it inherits the global default). Mirrors <see cref="Services.ScanCacheStore.GetSeriesOverride"/> for the dashboard to render the current state without a separate call.</summary>
     public bool? IncludeSpecialsOverride { get; set; }
 
+    /// <summary>This series' Sonarr quality-profile override, if one is set (null means it inherits the global default). Mirrors <see cref="IncludeSpecialsOverride"/>'s pattern.</summary>
+    public int? QualityProfileIdOverride { get; set; }
+
+    /// <summary>This series' Sonarr root-folder override, if one is set (null means it inherits the global default).</summary>
+    public string? RootFolderPathOverride { get; set; }
+
     /// <summary>The list of missing episodes for this series.</summary>
     public List<MissingEpisodeInfo> MissingEpisodes { get; set; } = [];
 }
