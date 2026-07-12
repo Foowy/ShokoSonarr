@@ -71,6 +71,7 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
                 ShokoSeriesId = series.ID,
                 Title = series.Title,
                 TvdbId = tvdbId,
+                GroupTitle = series.ParentGroup?.Title,
                 IncludeSpecialsOverride = overrideValue,
                 MissingEpisodes = displayMissing,
             });

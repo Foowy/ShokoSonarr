@@ -75,6 +75,50 @@ public class MissingEpisodeScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task Scan_SeriesWithGroup_PopulatesGroupTitle()
+    {
+        var missingEp = MakeEpisode(anidbId: 5001, number: 1, type: EpisodeType.Episode, hidden: false, videoCount: 0);
+
+        var group = new Mock<IShokoGroup>();
+        group.Setup(g => g.Title).Returns("One Piece Franchise");
+
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(50);
+        series.Setup(s => s.Episodes).Returns([missingEp.Object]);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+        series.Setup(s => s.ParentGroup).Returns(group.Object);
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        var snapshot = await scanner.ScanAsync();
+
+        Assert.Single(snapshot.Series);
+        Assert.Equal("One Piece Franchise", snapshot.Series[0].GroupTitle);
+    }
+
+    [Fact]
+    public async Task Scan_SeriesWithNoParentGroup_LeavesGroupTitleNull()
+    {
+        var missingEp = MakeEpisode(anidbId: 5002, number: 1, type: EpisodeType.Episode, hidden: false, videoCount: 0);
+
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(51);
+        series.Setup(s => s.Episodes).Returns([missingEp.Object]);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        var snapshot = await scanner.ScanAsync();
+
+        Assert.Single(snapshot.Series);
+        Assert.Null(snapshot.Series[0].GroupTitle);
+    }
+
+    [Fact]
     public async Task Scan_SeriesWithNoFilesAtAll_IsExcluded()
     {
         var unownedEp = MakeEpisode(anidbId: 2001, number: 1, type: EpisodeType.Episode, hidden: false, videoCount: 0);
