@@ -345,6 +345,18 @@ button.primary:hover { background: var(--amber-dim); color: var(--ink); }
   font-size: 0.8rem;
 }
 
+#suggestions-list .suggestion-row {
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--bg-inset);
+  font-size: 0.82rem;
+}
+#suggestions-list .suggestion-row:first-child { border-top: none; }
+#suggestions-list .empty {
+  font-family: var(--mono);
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+}
+
 #series-list > .empty {
   font-family: var(--mono);
   color: var(--ink-faint);

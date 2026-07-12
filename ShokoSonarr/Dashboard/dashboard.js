@@ -354,6 +354,35 @@ document.getElementById('open-history').onclick = () => {
     loadHistory();
 };
 
+function renderSuggestions(suggestions) {
+  const container = document.getElementById('suggestions-list');
+  container.innerHTML = '';
+  if (!suggestions || suggestions.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'No suggestions right now.';
+    container.appendChild(empty);
+    return;
+  }
+  for (const s of suggestions) {
+    const row = document.createElement('div');
+    row.className = 'suggestion-row';
+    row.innerHTML = `Because you have <strong>${s.OwningSeriesTitle}</strong>, you're missing its <strong>${s.RelationType}</strong>: <em>${s.RelatedTitle}</em>`;
+    container.appendChild(row);
+  }
+}
+
+async function loadSuggestions() {
+  const result = await fetchJson('/Scan/related-suggestions');
+  renderSuggestions(result.Data);
+}
+
+document.getElementById('open-suggestions').onclick = () => {
+  document.getElementById('suggestions-panel').classList.toggle('hidden');
+  if (!document.getElementById('suggestions-panel').classList.contains('hidden'))
+    loadSuggestions();
+};
+
 function setStatus(text, ok) {
   const el = document.getElementById('settings-status');
   el.textContent = text;
