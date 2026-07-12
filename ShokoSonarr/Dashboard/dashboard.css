@@ -60,6 +60,10 @@
 
 * { box-sizing: border-box; }
 
+html, body {
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--sans);
   margin: 0;
@@ -83,6 +87,7 @@ button, input, select {
 
 header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
@@ -109,7 +114,14 @@ header h1::before {
   margin-right: 0.6em;
 }
 
-.actions { display: flex; gap: 0.5rem; align-items: center; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+.title-group { display: flex; align-items: center; gap: 0.75rem; }
+
+.health-indicator { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--ink-dim); }
+.health-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--ink-dim); flex-shrink: 0; }
+.health-indicator.ok .health-dot { background: var(--teal); }
+.health-indicator.err .health-dot { background: var(--red); }
 
 .live-refresh {
   display: flex;
@@ -205,6 +217,22 @@ button.primary:hover { background: var(--amber-dim); color: var(--ink); }
 }
 #settings-status.ok { color: var(--teal); }
 #settings-status.err { color: var(--red); }
+
+#bulk-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 1.5rem 0;
+  padding: 0.6rem 0.9rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+#bulk-actions-bar.hidden { display: none; }
+#bulk-selected-count { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-dim); margin-right: 0.4rem; }
+
+.bulk-select { margin-right: 0.5rem; }
 
 #series-list { padding: 0.5rem 1.5rem 3rem; }
 
@@ -321,6 +349,19 @@ button.primary:hover { background: var(--amber-dim); color: var(--ink); }
   background: var(--amber-dim);
 }
 
+.profile-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-end;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  background: var(--bg-inset);
+  border-radius: var(--radius);
+}
+.profile-editor label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.72rem; color: var(--ink-dim); }
+
 #pending-list .pending-row {
   display: flex;
   justify-content: space-between;
@@ -333,6 +374,25 @@ button.primary:hover { background: var(--amber-dim); color: var(--ink); }
 #pending-list .pending-row:first-child { border-top: none; }
 #pending-list .pending-meta { color: var(--ink-dim); font-family: var(--mono); font-size: 0.75rem; }
 #pending-list .empty {
+  font-family: var(--mono);
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+}
+
+#suggestions-list .suggestion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--bg-inset);
+  font-size: 0.82rem;
+}
+#suggestions-list .suggestion-row:first-child { border-top: none; }
+.suggestion-candidates { display: flex; gap: 0.4rem; flex-wrap: wrap; width: 100%; margin-top: 0.4rem; }
+#suggestions-list .suggestion-candidates-empty { font-family: var(--mono); color: var(--ink-faint); font-size: 0.75rem; width: 100%; margin-top: 0.4rem; }
+#suggestions-list .empty {
   font-family: var(--mono);
   color: var(--ink-faint);
   font-size: 0.8rem;

@@ -29,4 +29,8 @@ public class SeriesMatcher(SonarrClient sonarrClient)
 
         return new MatchResolution(AutoResolved: false, TvdbId: null, Candidates: [], ErrorMessage: "no Sonarr match available");
     }
+
+    /// <summary>Searches Sonarr by title directly, without going through a scanned series' TMDB-linked TVDB ID first. Used when there is no Shoko series to resolve from (e.g. a discovery suggestion).</summary>
+    public Task<SonarrActionResult<List<SonarrSeriesLookupResult>>> SearchByTitleAsync(SonarrSettings settings, string title, CancellationToken ct = default) =>
+        sonarrClient.LookupByTitleAsync(settings, title, ct);
 }

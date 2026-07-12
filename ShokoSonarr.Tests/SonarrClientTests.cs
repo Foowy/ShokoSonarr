@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -83,6 +84,134 @@ public class SonarrClientTests
         Assert.False(body.RootElement.GetProperty("addOptions").GetProperty("searchForMissingEpisodes").GetBoolean());
         Assert.Equal(4, body.RootElement.GetProperty("qualityProfileId").GetInt32());
         Assert.Equal("/anime", body.RootElement.GetProperty("rootFolderPath").GetString());
+    }
+
+    [Fact]
+    public async Task AddSeriesAsync_WithDiscoveryMode_SendsMonitorAllAndSearchTrue()
+    {
+        var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.Created)
+        {
+            Content = new StringContent("""{"id":56}"""),
+        });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.AddSeriesAsync(TestSettings, tvdbId: 81798, title: "Some Sequel", qualityProfileId: 4, rootFolderPath: "/anime", monitorMode: "all", searchOnAdd: true);
+
+        Assert.True(result.Success);
+        Assert.Equal(56, result.Data);
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        Assert.Equal("all", body.RootElement.GetProperty("addOptions").GetProperty("monitor").GetString());
+        Assert.True(body.RootElement.GetProperty("addOptions").GetProperty("searchForMissingEpisodes").GetBoolean());
+    }
+
+    [Fact]
+    public async Task AddSeriesAsync_WithTagIds_SendsTagsArray()
+    {
+        var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.Created)
+        {
+            Content = new StringContent("""{"id":57}"""),
+        });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.AddSeriesAsync(TestSettings, tvdbId: 81799, title: "Tagged Show", qualityProfileId: 4, rootFolderPath: "/anime", tagIds: [3, 5]);
+
+        Assert.True(result.Success);
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        var tags = body.RootElement.GetProperty("tags").EnumerateArray().Select(t => t.GetInt32()).ToList();
+        Assert.Equal([3, 5], tags);
+    }
+
+    [Fact]
+    public async Task GetTagsAsync_ParsesTagList()
+    {
+        var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""[{"id":1,"label":"anime"},{"id":2,"label":"One Piece"}]"""),
+        });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.GetTagsAsync(TestSettings);
+
+        Assert.True(result.Success);
+        Assert.Equal(2, result.Data!.Count);
+        Assert.Equal("One Piece", result.Data![1].Label);
+    }
+
+    [Fact]
+    public async Task CreateTagAsync_SendsLabelAndParsesResponse()
+    {
+        var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.Created)
+        {
+            Content = new StringContent("""{"id":9,"label":"One Piece"}"""),
+        });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.CreateTagAsync(TestSettings, "One Piece");
+
+        Assert.True(result.Success);
+        Assert.Equal(9, result.Data!.Id);
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        Assert.Equal("One Piece", body.RootElement.GetProperty("label").GetString());
+    }
+
+    [Fact]
+    public async Task EnsureTagIdAsync_ExistingTagCaseInsensitive_ReturnsExistingId()
+    {
+        var handler = new FakeHandler(req => req.Method == HttpMethod.Get
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""[{"id":4,"label":"one piece"}]""") }
+            : throw new InvalidOperationException("should not create a tag that already exists"));
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.EnsureTagIdAsync(TestSettings, "One Piece");
+
+        Assert.True(result.Success);
+        Assert.Equal(4, result.Data);
+    }
+
+    [Fact]
+    public async Task EnsureTagIdAsync_NoExistingTag_CreatesAndReturnsNewId()
+    {
+        var handler = new FakeHandler(req => req.Method == HttpMethod.Get
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") }
+            : new HttpResponseMessage(HttpStatusCode.Created) { Content = new StringContent("""{"id":11,"label":"New Franchise"}""") });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.EnsureTagIdAsync(TestSettings, "New Franchise");
+
+        Assert.True(result.Success);
+        Assert.Equal(11, result.Data);
+    }
+
+    [Fact]
+    public async Task UpdateSeriesTagAsync_TagNotYetPresent_AddsItAndPutsFullResource()
+    {
+        var handler = new FakeHandler(req => req.Method == HttpMethod.Get
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"id":42,"title":"Existing Show","tvdbId":81797,"tags":[1]}""") }
+            : new HttpResponseMessage(HttpStatusCode.Accepted) { Content = new StringContent("""{"id":42,"title":"Existing Show","tvdbId":81797,"tags":[1,7]}""") });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.UpdateSeriesTagAsync(TestSettings, sonarrSeriesId: 42, tagId: 7);
+
+        Assert.True(result.Success);
+        Assert.Equal(HttpMethod.Put, handler.LastRequest!.Method);
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        var tags = body.RootElement.GetProperty("tags").EnumerateArray().Select(t => t.GetInt32()).ToList();
+        Assert.Contains(7, tags);
+        Assert.Contains(1, tags);
+        Assert.Equal("Existing Show", body.RootElement.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task UpdateSeriesTagAsync_TagAlreadyPresent_StillSucceeds()
+    {
+        var handler = new FakeHandler(req => req.Method == HttpMethod.Get
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"id":42,"title":"Existing Show","tags":[7]}""") }
+            : new HttpResponseMessage(HttpStatusCode.Accepted) { Content = new StringContent("""{"id":42,"title":"Existing Show","tags":[7]}""") });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.UpdateSeriesTagAsync(TestSettings, sonarrSeriesId: 42, tagId: 7);
+
+        Assert.True(result.Success);
     }
 
     [Fact]

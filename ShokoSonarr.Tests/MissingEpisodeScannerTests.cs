@@ -65,13 +65,80 @@ public class MissingEpisodeScannerTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Single(snapshot.Series);
         Assert.Single(snapshot.Series[0].MissingEpisodes);
         Assert.Equal(5, snapshot.Series[0].MissingEpisodes[0].EpisodeNumber);
         Assert.Equal(1001, snapshot.Series[0].MissingEpisodes[0].AnidbEpisodeId);
+    }
+
+    [Fact]
+    public async Task Scan_SeriesWithGroup_PopulatesGroupTitle()
+    {
+        var missingEp = MakeEpisode(anidbId: 5001, number: 1, type: EpisodeType.Episode, hidden: false, videoCount: 0);
+
+        var group = new Mock<IShokoGroup>();
+        group.Setup(g => g.Title).Returns("One Piece Franchise");
+
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(50);
+        series.Setup(s => s.Episodes).Returns([missingEp.Object]);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+        series.Setup(s => s.ParentGroup).Returns(group.Object);
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        var snapshot = await scanner.ScanAsync();
+
+        Assert.Single(snapshot.Series);
+        Assert.Equal("One Piece Franchise", snapshot.Series[0].GroupTitle);
+    }
+
+    [Fact]
+    public async Task Scan_SeriesWithNoParentGroup_LeavesGroupTitleNull()
+    {
+        var missingEp = MakeEpisode(anidbId: 5002, number: 1, type: EpisodeType.Episode, hidden: false, videoCount: 0);
+
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(51);
+        series.Setup(s => s.Episodes).Returns([missingEp.Object]);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        var snapshot = await scanner.ScanAsync();
+
+        Assert.Single(snapshot.Series);
+        Assert.Null(snapshot.Series[0].GroupTitle);
+    }
+
+    [Fact]
+    public async Task Scan_SeriesWithSonarrOverride_PopulatesOverrideFields()
+    {
+        var missingEp = MakeEpisode(anidbId: 6001, number: 1, type: EpisodeType.Episode, hidden: false, videoCount: 0);
+
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(60);
+        series.Setup(s => s.Episodes).Returns([missingEp.Object]);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+
+        _cacheStore.SetSeriesSonarrOverride(60, qualityProfileId: 9, rootFolderPath: "/4k-anime");
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        var snapshot = await scanner.ScanAsync();
+
+        Assert.Single(snapshot.Series);
+        Assert.Equal(9, snapshot.Series[0].QualityProfileIdOverride);
+        Assert.Equal("/4k-anime", snapshot.Series[0].RootFolderPathOverride);
     }
 
     [Fact]
@@ -87,7 +154,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Empty(snapshot.Series);
@@ -107,7 +174,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Empty(snapshot.Series);
@@ -127,7 +194,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Empty(snapshot.Series);
@@ -148,7 +215,7 @@ public class MissingEpisodeScannerTests : IDisposable
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { IncludeSpecials = true });
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Single(snapshot.Series);
@@ -171,7 +238,7 @@ public class MissingEpisodeScannerTests : IDisposable
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { IncludeSpecials = false });
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Empty(snapshot.Series);
@@ -193,7 +260,7 @@ public class MissingEpisodeScannerTests : IDisposable
         _cacheStore.SaveSettings(new Config.SonarrSettings { IncludeSpecials = false });
         _cacheStore.SetSeriesOverride(12, includeSpecials: true);
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Single(snapshot.Series);
@@ -217,7 +284,7 @@ public class MissingEpisodeScannerTests : IDisposable
         _cacheStore.SaveSettings(new Config.SonarrSettings { IncludeSpecials = true });
         _cacheStore.SetSeriesOverride(13, includeSpecials: false);
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Empty(snapshot.Series);
@@ -236,12 +303,12 @@ public class MissingEpisodeScannerTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { BaseUrl = "http://sonarr.local:8989", ApiKey = "key" });
-        _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 20, AnidbEpisodeId = 9000, SonarrSeriesId = 55, SonarrEpisodeId = 777, TriggeredAtUtc = DateTime.UtcNow });
+        _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 20, SeriesTitle = "Some Series", AnidbEpisodeId = 9000, EpisodeTitle = "Episode 1", SonarrSeriesId = 55, SonarrEpisodeId = 777, TriggeredAtUtc = DateTime.UtcNow });
 
         var handler = new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Accepted) { Content = new StringContent("{}") });
         var sonarrClient = new SonarrClient(new HttpClient(handler));
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient);
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient, new NotificationService(new HttpClient()));
         await scanner.ScanAsync();
 
         Assert.Empty(_cacheStore.GetPendingSearches());
@@ -249,6 +316,12 @@ public class MissingEpisodeScannerTests : IDisposable
         var body = await handler.Requests[0].Content!.ReadAsStringAsync();
         Assert.Contains("\"monitored\":false", body);
         Assert.Contains("777", body);
+
+        var history = _cacheStore.GetHistory();
+        Assert.Single(history);
+        Assert.Equal(SearchHistoryOutcome.Imported, history[0].Outcome);
+        Assert.Equal("Some Series", history[0].SeriesTitle);
+        Assert.Equal("Episode 1", history[0].EpisodeTitle);
     }
 
     [Fact]
@@ -270,7 +343,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var handler = new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Accepted) { Content = new StringContent("{}") });
         var sonarrClient = new SonarrClient(new HttpClient(handler));
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient);
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient, new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Single(_cacheStore.GetPendingSearches());
@@ -293,7 +366,7 @@ public class MissingEpisodeScannerTests : IDisposable
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { HideUnaired = true });
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Empty(snapshot.Series);
@@ -314,7 +387,7 @@ public class MissingEpisodeScannerTests : IDisposable
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { HideUnaired = true });
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Empty(snapshot.Series);
@@ -335,7 +408,7 @@ public class MissingEpisodeScannerTests : IDisposable
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { HideUnaired = true });
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()));
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
         var snapshot = await scanner.ScanAsync();
 
         Assert.Single(snapshot.Series);
@@ -362,7 +435,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var handler = new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Accepted) { Content = new StringContent("{}") });
         var sonarrClient = new SonarrClient(new HttpClient(handler));
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient);
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient, new NotificationService(new HttpClient()));
         await scanner.ScanAsync();
 
         Assert.Empty(handler.Requests);
@@ -389,7 +462,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var handler = new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Accepted) { Content = new StringContent("{}") });
         var sonarrClient = new SonarrClient(new HttpClient(handler));
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient);
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient, new NotificationService(new HttpClient()));
         await scanner.ScanAsync();
 
         Assert.Empty(_cacheStore.GetPendingSearches());
@@ -419,7 +492,7 @@ public class MissingEpisodeScannerTests : IDisposable
         _cacheStore.SaveSettings(new Config.SonarrSettings { BaseUrl = "http://sonarr.local:8989", ApiKey = "key" });
         _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 24, AnidbEpisodeId = 9004, SonarrSeriesId = 55, SonarrEpisodeId = 781, TriggeredAtUtc = DateTime.UtcNow });
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new ThrowingSonarrClient());
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new ThrowingSonarrClient(), new NotificationService(new HttpClient()));
         var exception = await Record.ExceptionAsync(() => scanner.ScanAsync());
 
         Assert.Null(exception);
@@ -439,16 +512,21 @@ public class MissingEpisodeScannerTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([series.Object]);
         _cacheStore.SaveSettings(new Config.SonarrSettings { BaseUrl = "http://sonarr.local:8989", ApiKey = "key" });
-        _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 25, AnidbEpisodeId = 9005, SonarrSeriesId = 55, SonarrEpisodeId = 782, TriggeredAtUtc = DateTime.UtcNow.AddDays(-15) });
+        _cacheStore.AddPendingSearch(new PendingSearch { ShokoSeriesId = 25, SeriesTitle = "Expiring Series", AnidbEpisodeId = 9005, EpisodeTitle = "Episode 1", SonarrSeriesId = 55, SonarrEpisodeId = 782, TriggeredAtUtc = DateTime.UtcNow.AddDays(-15) });
 
         var handler = new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError) { Content = new StringContent("boom") });
         var sonarrClient = new SonarrClient(new HttpClient(handler));
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient);
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient, new NotificationService(new HttpClient()));
         var exception = await Record.ExceptionAsync(() => scanner.ScanAsync());
 
         Assert.Null(exception);
         Assert.Empty(_cacheStore.GetPendingSearches());
+
+        var history = _cacheStore.GetHistory();
+        Assert.Single(history);
+        Assert.Equal(SearchHistoryOutcome.Expired, history[0].Outcome);
+        Assert.Equal("Expiring Series", history[0].SeriesTitle);
     }
 
     [Fact]
@@ -469,7 +547,7 @@ public class MissingEpisodeScannerTests : IDisposable
         var handler = new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError) { Content = new StringContent("boom") });
         var sonarrClient = new SonarrClient(new HttpClient(handler));
 
-        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient);
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, sonarrClient, new NotificationService(new HttpClient()));
         var exception = await Record.ExceptionAsync(() => scanner.ScanAsync());
 
         Assert.Null(exception);

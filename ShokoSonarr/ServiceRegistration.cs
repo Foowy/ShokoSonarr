@@ -20,7 +20,10 @@ public class ServiceRegistration : IPluginServiceRegistration
         serviceCollection.AddSingleton(new ScanCacheStore(applicationPaths.DataPath));
         serviceCollection.AddSingleton<MissingEpisodeScanner>();
         serviceCollection.AddSingleton<SonarrClient>();
+        serviceCollection.AddSingleton<RadarrClient>();
         serviceCollection.AddSingleton<SeriesMatcher>();
+        serviceCollection.AddSingleton<NotificationService>();
+        serviceCollection.AddSingleton<RelatedSeriesFinder>();
         serviceCollection.AddHostedService<ScanSchedulerService>();
     }
 }

@@ -34,8 +34,9 @@ http://<your-shoko-host>:<port>/api/plugin/ShokoSonarr/dashboard
 - **Series list** — every series with missing episodes, expandable to see each episode and its status (`none` / `search-triggered`).
 - **Specials toggle** — per-series Include/Exclude override for specials episodes; click the active button again to clear it back to the global default.
 - **Pending Searches** — view and cancel any in-flight Sonarr search the plugin has triggered but Shoko hasn't confirmed as imported yet.
+- **History** — a log of past outcomes (triggered, imported, cancelled, expired) for episodes that were previously pending, since Pending Searches only shows what's still in-flight.
 - **Theme picker** — System (follows OS dark/light), Ember, Deep Teal, AniBlackle, or Paper.
-- **Settings** — Sonarr base URL/API key, scan interval, quality profile, root folder, include-specials, hide-unaired.
+- **Settings** — Sonarr base URL/API key, scan interval, quality profile, root folder, include-specials, hide-unaired, and an optional Discord-compatible notification webhook (pinged when a search is triggered or a stale pending entry expires after 14 days).
 
 ### First-time setup
 

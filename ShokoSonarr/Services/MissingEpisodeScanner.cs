@@ -7,7 +7,7 @@ using ShokoSonarr.Models;
 namespace ShokoSonarr.Services;
 
 /// <summary>Scans the Shoko collection for missing episodes on already-inventoried series, and reconciles previously-triggered Sonarr searches once Shoko confirms an episode was imported.</summary>
-public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheStore cacheStore, SonarrClient sonarrClient)
+public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheStore cacheStore, SonarrClient sonarrClient, NotificationService notificationService)
 {
     private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
@@ -33,7 +33,8 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
             if (series.LocalEpisodeCounts.Episodes + series.LocalEpisodeCounts.Specials <= 0)
                 continue;
 
-            var overrideValue = cacheStore.GetSeriesOverride(series.ID)?.IncludeSpecials;
+            var seriesOverride = cacheStore.GetSeriesOverride(series.ID);
+            var overrideValue = seriesOverride?.IncludeSpecials;
             var includeSpecials = overrideValue ?? settings.IncludeSpecials;
             var scannedTypes = includeSpecials
                 ? new[] { EpisodeType.Episode, EpisodeType.Special }
@@ -71,6 +72,9 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
                 ShokoSeriesId = series.ID,
                 Title = series.Title,
                 TvdbId = tvdbId,
+                GroupTitle = series.ParentGroup?.Title,
+                QualityProfileIdOverride = seriesOverride?.QualityProfileId,
+                RootFolderPathOverride = seriesOverride?.RootFolderPath,
                 IncludeSpecialsOverride = overrideValue,
                 MissingEpisodes = displayMissing,
             });
@@ -105,28 +109,50 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
                 if (result.Success)
                 {
                     cacheStore.RemovePendingSearch(entry.ShokoSeriesId, entry.AnidbEpisodeId);
+                    cacheStore.AddHistoryEntry(new SearchHistoryEntry
+                    {
+                        ShokoSeriesId = entry.ShokoSeriesId,
+                        SeriesTitle = entry.SeriesTitle,
+                        AnidbEpisodeId = entry.AnidbEpisodeId,
+                        EpisodeTitle = entry.EpisodeTitle,
+                        Outcome = SearchHistoryOutcome.Imported,
+                        TimestampUtc = DateTime.UtcNow,
+                    });
                 }
                 else
                 {
                     s_logger.Warn("ShokoSonarr: failed to unmonitor Sonarr episode {SonarrEpisodeId} for AniDB episode {AnidbEpisodeId}: {Error}", entry.SonarrEpisodeId, entry.AnidbEpisodeId, result.ErrorMessage);
-                    ExpireIfStale(entry);
+                    await ExpireIfStaleAsync(settings, entry).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
             {
                 s_logger.Warn(ex, "ShokoSonarr: failed to unmonitor Sonarr episode {SonarrEpisodeId} for AniDB episode {AnidbEpisodeId}", entry.SonarrEpisodeId, entry.AnidbEpisodeId);
-                ExpireIfStale(entry);
+                await ExpireIfStaleAsync(settings, entry).ConfigureAwait(false);
             }
         }
     }
 
     /// <summary>Drops a pending entry that has failed reconciliation for longer than <see cref="MaxPendingAge"/>, instead of retrying it forever.</summary>
-    private void ExpireIfStale(PendingSearch entry)
+    private async Task ExpireIfStaleAsync(Config.SonarrSettings settings, PendingSearch entry)
     {
         if (DateTime.UtcNow - entry.TriggeredAtUtc < MaxPendingAge)
             return;
 
         s_logger.Warn("ShokoSonarr: giving up on Sonarr episode {SonarrEpisodeId} for AniDB episode {AnidbEpisodeId} after {MaxPendingAge} of failed reconciliation attempts", entry.SonarrEpisodeId, entry.AnidbEpisodeId, MaxPendingAge);
         cacheStore.RemovePendingSearch(entry.ShokoSeriesId, entry.AnidbEpisodeId);
+        cacheStore.AddHistoryEntry(new SearchHistoryEntry
+        {
+            ShokoSeriesId = entry.ShokoSeriesId,
+            SeriesTitle = entry.SeriesTitle,
+            AnidbEpisodeId = entry.AnidbEpisodeId,
+            EpisodeTitle = entry.EpisodeTitle,
+            Outcome = SearchHistoryOutcome.Expired,
+            TimestampUtc = DateTime.UtcNow,
+        });
+
+        var seriesLabel = string.IsNullOrEmpty(entry.SeriesTitle) ? $"series #{entry.ShokoSeriesId}" : entry.SeriesTitle;
+        var episodeLabel = string.IsNullOrEmpty(entry.EpisodeTitle) ? $"AniDB episode {entry.AnidbEpisodeId}" : entry.EpisodeTitle;
+        await notificationService.NotifyAsync(settings, $"Gave up tracking **{seriesLabel}** — {episodeLabel} — after {MaxPendingAge.TotalDays:0} days of failed reconciliation").ConfigureAwait(false);
     }
 }

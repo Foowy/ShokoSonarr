@@ -6,8 +6,14 @@ public class PendingSearch
     /// <summary>The Shoko series ID.</summary>
     public int ShokoSeriesId { get; set; }
 
+    /// <summary>The series title at the time the search was triggered, for display without a re-lookup. Empty for entries persisted before this field was added.</summary>
+    public string SeriesTitle { get; set; } = string.Empty;
+
     /// <summary>The AniDB episode ID — the stable key used to match this entry back to a scan result.</summary>
     public int AnidbEpisodeId { get; set; }
+
+    /// <summary>The episode title at the time the search was triggered, for display without a re-lookup. Empty for entries persisted before this field was added.</summary>
+    public string EpisodeTitle { get; set; } = string.Empty;
 
     /// <summary>The Sonarr series ID this episode belongs to.</summary>
     public int SonarrSeriesId { get; set; }

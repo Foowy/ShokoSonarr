@@ -7,12 +7,20 @@
 </head>
 <body>
   <header>
-    <h1>Missing Episodes</h1>
+    <div class="title-group">
+      <h1>Missing Episodes</h1>
+      <span id="connection-health" class="health-indicator" title="Sonarr connection status">
+        <span class="health-dot"></span><span class="health-label">Checking…</span>
+      </span>
+    </div>
     <div class="actions">
       <button id="scan-now" class="primary">Scan Now</button>
       <label class="live-refresh"><input id="live-refresh" type="checkbox" /> Live Refresh</label>
       <button id="open-pending">Pending Searches</button>
+      <button id="open-history">History</button>
+      <button id="open-suggestions">Suggestions</button>
       <button id="open-settings">Settings</button>
+      <button id="sync-tags">Sync Tags</button>
     </div>
   </header>
 
@@ -27,6 +35,19 @@
       </div>
       <div class="actions">
         <button id="test-connection">Test Connection</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>Radarr Connection</h2>
+      <div class="settings-grid">
+        <label>Base URL <input id="radarr-settings-url" type="text" placeholder="http://192.168.1.60:7878" /></label>
+        <label>API Key <input id="radarr-settings-key" type="password" /></label>
+        <label>Quality Profile <select id="radarr-settings-quality-profile"></select></label>
+        <label>Root Folder <select id="radarr-settings-root-folder"></select></label>
+      </div>
+      <div class="actions">
+        <button id="radarr-test-connection">Test Connection</button>
       </div>
     </div>
 
@@ -51,6 +72,7 @@
         </label>
         <label><input id="settings-include-specials" type="checkbox" /> Include Specials</label>
         <label><input id="settings-hide-unaired" type="checkbox" /> Hide Unaired Episodes</label>
+        <label>Notification Webhook URL <input id="settings-webhook" type="password" placeholder="Discord-compatible webhook (optional)" /></label>
       </div>
     </div>
 
@@ -64,6 +86,25 @@
     <h2>Pending Sonarr Searches</h2>
     <div id="pending-list"></div>
   </section>
+
+  <section id="history-panel" class="panel hidden">
+    <h2>Search History</h2>
+    <div id="history-list"></div>
+  </section>
+
+  <section id="suggestions-panel" class="panel hidden">
+    <h2>Related Series You Don't Own</h2>
+    <div id="suggestions-list"></div>
+  </section>
+
+  <div id="bulk-actions-bar" class="hidden">
+    <span id="bulk-selected-count"></span>
+    <button id="bulk-select-all">Select all</button>
+    <button id="bulk-clear">Clear</button>
+    <button id="bulk-include-specials">Include Specials</button>
+    <button id="bulk-exclude-specials">Exclude Specials</button>
+    <button id="bulk-add-and-search" class="primary">Add to Sonarr / Search</button>
+  </div>
 
   <section id="series-list"></section>
 

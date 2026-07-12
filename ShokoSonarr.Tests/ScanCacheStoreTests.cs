@@ -46,6 +46,28 @@ public class ScanCacheStoreTests : IDisposable
     }
 
     [Fact]
+    public void SaveRadarrSettings_ThenGetRadarrSettings_RoundTrips()
+    {
+        _store.SaveRadarrSettings(new RadarrSettings { BaseUrl = "http://radarr:7878", ApiKey = "xyz789", QualityProfileId = 3, RootFolderPath = "/movies" });
+
+        var settings = _store.GetRadarrSettings();
+
+        Assert.Equal("http://radarr:7878", settings.BaseUrl);
+        Assert.Equal("xyz789", settings.ApiKey);
+        Assert.Equal(3, settings.QualityProfileId);
+        Assert.Equal("/movies", settings.RootFolderPath);
+    }
+
+    [Fact]
+    public void GetRadarrSettings_WhenNoneSaved_ReturnsDefaults()
+    {
+        var settings = _store.GetRadarrSettings();
+
+        Assert.Null(settings.BaseUrl);
+        Assert.Null(settings.QualityProfileId);
+    }
+
+    [Fact]
     public void SaveSettings_ThenGetSettings_RoundTripsIncludeSpecials()
     {
         _store.SaveSettings(new SonarrSettings { IncludeSpecials = false });
@@ -118,6 +140,56 @@ public class ScanCacheStoreTests : IDisposable
 
         Assert.NotNull(result);
         Assert.False(result!.IncludeSpecials);
+    }
+
+    [Fact]
+    public void SetSeriesOverride_ThenSetSeriesSonarrOverride_PreservesSpecialsOverride()
+    {
+        _store.SetSeriesOverride(shokoSeriesId: 1, includeSpecials: true);
+        _store.SetSeriesSonarrOverride(shokoSeriesId: 1, qualityProfileId: 4, rootFolderPath: "/anime");
+
+        var result = _store.GetSeriesOverride(1);
+
+        Assert.True(result!.IncludeSpecials);
+        Assert.Equal(4, result.QualityProfileId);
+        Assert.Equal("/anime", result.RootFolderPath);
+    }
+
+    [Fact]
+    public void SetSeriesSonarrOverride_ThenSetSeriesOverride_PreservesSonarrOverride()
+    {
+        _store.SetSeriesSonarrOverride(shokoSeriesId: 2, qualityProfileId: 7, rootFolderPath: "/4k");
+        _store.SetSeriesOverride(shokoSeriesId: 2, includeSpecials: false);
+
+        var result = _store.GetSeriesOverride(2);
+
+        Assert.False(result!.IncludeSpecials);
+        Assert.Equal(7, result.QualityProfileId);
+        Assert.Equal("/4k", result.RootFolderPath);
+    }
+
+    [Fact]
+    public void SetSeriesOverride_NullClearsSpecialsButNotSonarrOverride()
+    {
+        _store.SetSeriesSonarrOverride(shokoSeriesId: 3, qualityProfileId: 2, rootFolderPath: "/x");
+        _store.SetSeriesOverride(shokoSeriesId: 3, includeSpecials: true);
+        _store.SetSeriesOverride(shokoSeriesId: 3, includeSpecials: null);
+
+        var result = _store.GetSeriesOverride(3);
+
+        Assert.Null(result!.IncludeSpecials);
+        Assert.Equal(2, result.QualityProfileId);
+    }
+
+    [Fact]
+    public void SetSeriesSonarrOverride_BothNull_ClearsOverrideRowIfNoOtherFieldsSet()
+    {
+        _store.SetSeriesSonarrOverride(shokoSeriesId: 4, qualityProfileId: 5, rootFolderPath: "/y");
+        _store.SetSeriesSonarrOverride(shokoSeriesId: 4, qualityProfileId: null, rootFolderPath: null);
+
+        var result = _store.GetSeriesOverride(4);
+
+        Assert.Null(result);
     }
 
     [Fact]
@@ -197,5 +269,91 @@ public class ScanCacheStoreTests : IDisposable
         _store.RemovePendingSearch(42, 1001);
 
         Assert.Empty(_store.GetPendingSearches());
+    }
+
+    [Fact]
+    public void GetHistory_WhenNoneAdded_ReturnsEmpty()
+    {
+        Assert.Empty(_store.GetHistory());
+    }
+
+    [Fact]
+    public void AddHistoryEntry_ThenGetHistory_RoundTrips()
+    {
+        _store.AddHistoryEntry(new SearchHistoryEntry
+        {
+            ShokoSeriesId = 42,
+            SeriesTitle = "Some Series",
+            AnidbEpisodeId = 1001,
+            EpisodeTitle = "Episode 1",
+            Outcome = SearchHistoryOutcome.Triggered,
+            TimestampUtc = DateTime.UtcNow,
+        });
+
+        var history = _store.GetHistory();
+
+        Assert.Single(history);
+        Assert.Equal("Some Series", history[0].SeriesTitle);
+        Assert.Equal(SearchHistoryOutcome.Triggered, history[0].Outcome);
+    }
+
+    [Fact]
+    public void GetHistory_ReturnsNewestFirst()
+    {
+        var older = DateTime.UtcNow.AddMinutes(-10);
+        var newer = DateTime.UtcNow;
+        _store.AddHistoryEntry(new SearchHistoryEntry { ShokoSeriesId = 1, AnidbEpisodeId = 1, Outcome = SearchHistoryOutcome.Triggered, TimestampUtc = older });
+        _store.AddHistoryEntry(new SearchHistoryEntry { ShokoSeriesId = 2, AnidbEpisodeId = 2, Outcome = SearchHistoryOutcome.Imported, TimestampUtc = newer });
+
+        var history = _store.GetHistory();
+
+        Assert.Equal(2, history[0].ShokoSeriesId);
+        Assert.Equal(1, history[1].ShokoSeriesId);
+    }
+
+    [Fact]
+    public void AddHistoryEntry_BeyondCap_TrimsOldestEntries()
+    {
+        var baseTime = DateTime.UtcNow.AddDays(-1);
+        for (var i = 0; i < 505; i++)
+        {
+            _store.AddHistoryEntry(new SearchHistoryEntry
+            {
+                ShokoSeriesId = i,
+                AnidbEpisodeId = i,
+                Outcome = SearchHistoryOutcome.Triggered,
+                TimestampUtc = baseTime.AddSeconds(i),
+            });
+        }
+
+        var history = _store.GetHistory(limit: 1000);
+
+        Assert.True(history.Count <= 500);
+        // The oldest entries (lowest ShokoSeriesId, since they share the same insertion order as timestamp) should be gone.
+        Assert.DoesNotContain(history, h => h.ShokoSeriesId == 0);
+        Assert.Contains(history, h => h.ShokoSeriesId == 504);
+    }
+
+    [Fact]
+    public void AddHistoryEntry_BeyondCap_WithSharedTimestamps_OnlyTrimsOldestOverflowNotWholeBatch()
+    {
+        // Simulates MonitorAndSearchAsync triggering several episodes in one call, which all get the same
+        // triggeredAt timestamp -- a timestamp-keyed cutoff would delete the entire shared-timestamp batch
+        // instead of just the oldest `overflow` entries.
+        var sharedTimestamp = DateTime.UtcNow.AddDays(-1);
+        for (var i = 0; i < 503; i++)
+        {
+            _store.AddHistoryEntry(new SearchHistoryEntry
+            {
+                ShokoSeriesId = i,
+                AnidbEpisodeId = i,
+                Outcome = SearchHistoryOutcome.Triggered,
+                TimestampUtc = sharedTimestamp,
+            });
+        }
+
+        var history = _store.GetHistory(limit: 1000);
+
+        Assert.Equal(500, history.Count);
     }
 }

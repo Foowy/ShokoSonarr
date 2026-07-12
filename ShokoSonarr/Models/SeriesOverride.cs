@@ -8,4 +8,10 @@ public class SeriesOverride
 
     /// <summary>True/false to force include/exclude specials for this series; null means "no override, use the global default" and is never stored (see <see cref="Services.ScanCacheStore.SetSeriesOverride"/>).</summary>
     public bool? IncludeSpecials { get; set; }
+
+    /// <summary>Sonarr quality profile ID to use when adding this series, overriding the global default. Null means "no override".</summary>
+    public int? QualityProfileId { get; set; }
+
+    /// <summary>Sonarr root folder path to use when adding this series, overriding the global default. Null means "no override".</summary>
+    public string? RootFolderPath { get; set; }
 }
