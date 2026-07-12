@@ -54,12 +54,22 @@ function buildStrip(count) {
   return strip;
 }
 
+const bulkSelectedIds = new Set();
+let lastSeriesList = [];
+
 function renderSeries(snapshot) {
   const container = document.getElementById('series-list');
   // Re-rendering rebuilds every row from scratch, which would otherwise collapse anything the user
   // had expanded (e.g. on every Live Refresh tick) -- carry the expanded set across the rebuild.
   const expandedIds = new Set([...container.querySelectorAll('.series-row.expanded')].map(r => r.dataset.seriesId));
   container.innerHTML = '';
+  lastSeriesList = (snapshot && snapshot.Data) ? snapshot.Data.Series : [];
+  // Bulk selection is intentionally preserved across re-renders (e.g. Live Refresh ticks) the same
+  // way expanded rows are -- but drop any selected ID no longer present in the fresh snapshot.
+  for (const id of [...bulkSelectedIds])
+    if (!lastSeriesList.some(s => String(s.ShokoSeriesId) === id)) bulkSelectedIds.delete(id);
+  updateBulkActionsBar();
+
   if (!snapshot || !snapshot.Data || snapshot.Data.Series.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty';
@@ -76,6 +86,18 @@ function renderSeries(snapshot) {
 
     const header = document.createElement('div');
     header.className = 'header';
+
+    const select = document.createElement('input');
+    select.type = 'checkbox';
+    select.className = 'bulk-select';
+    select.checked = bulkSelectedIds.has(String(series.ShokoSeriesId));
+    select.onclick = (e) => {
+      e.stopPropagation();
+      const id = String(series.ShokoSeriesId);
+      if (select.checked) bulkSelectedIds.add(id); else bulkSelectedIds.delete(id);
+      updateBulkActionsBar();
+    };
+    header.appendChild(select);
 
     const chevron = document.createElement('span');
     chevron.className = 'chevron';
@@ -157,6 +179,57 @@ async function addAndSearch(series) {
   alert(result.Success ? 'Search triggered.' : `Failed: ${result.Message}`);
   await loadScanResults();
 }
+
+function updateBulkActionsBar() {
+  const bar = document.getElementById('bulk-actions-bar');
+  const count = bulkSelectedIds.size;
+  bar.classList.toggle('hidden', count === 0);
+  document.getElementById('bulk-selected-count').textContent = `${count} selected`;
+}
+
+document.getElementById('bulk-select-all').onclick = () => {
+  for (const s of lastSeriesList) bulkSelectedIds.add(String(s.ShokoSeriesId));
+  renderSeries({ Data: { Series: lastSeriesList } });
+};
+
+document.getElementById('bulk-clear').onclick = () => {
+  bulkSelectedIds.clear();
+  renderSeries({ Data: { Series: lastSeriesList } });
+};
+
+async function bulkSetSpecialsOverride(includeSpecials) {
+  const ids = [...bulkSelectedIds];
+  let result = null;
+  for (const id of ids) {
+    result = await fetchJson(`/Scan/series/${id}/include-specials`, {
+      method: 'PUT',
+      body: JSON.stringify({ includeSpecials }),
+    });
+  }
+  bulkSelectedIds.clear();
+  if (result) renderSeries(result);
+}
+
+document.getElementById('bulk-include-specials').onclick = () => bulkSetSpecialsOverride(true);
+document.getElementById('bulk-exclude-specials').onclick = () => bulkSetSpecialsOverride(false);
+
+document.getElementById('bulk-add-and-search').onclick = async () => {
+  const selected = lastSeriesList.filter(s => bulkSelectedIds.has(String(s.ShokoSeriesId)));
+  const withMatch = selected.filter(s => s.TvdbId);
+  const skipped = selected.length - withMatch.length;
+  let triggered = 0, failed = 0;
+  for (const series of withMatch) {
+    const anidbEpisodeIds = series.MissingEpisodes.map(e => e.AnidbEpisodeId);
+    const result = await fetchJson('/Sonarr/add-and-search', {
+      method: 'POST',
+      body: JSON.stringify({ shokoSeriesId: series.ShokoSeriesId, tvdbId: series.TvdbId, anidbEpisodeIds }),
+    });
+    if (result.Success) triggered++; else failed++;
+  }
+  alert(`Triggered ${triggered}, skipped ${skipped} with no Sonarr match, ${failed} failed.`);
+  bulkSelectedIds.clear();
+  await loadScanResults();
+};
 
 async function setSpecialsOverride(shokoSeriesId, includeSpecials) {
   const result = await fetchJson(`/Scan/series/${shokoSeriesId}/include-specials`, {

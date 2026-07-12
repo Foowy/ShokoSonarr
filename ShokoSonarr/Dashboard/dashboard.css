@@ -218,6 +218,22 @@ button.primary:hover { background: var(--amber-dim); color: var(--ink); }
 #settings-status.ok { color: var(--teal); }
 #settings-status.err { color: var(--red); }
 
+#bulk-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 1.5rem 0;
+  padding: 0.6rem 0.9rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+#bulk-actions-bar.hidden { display: none; }
+#bulk-selected-count { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-dim); margin-right: 0.4rem; }
+
+.bulk-select { margin-right: 0.5rem; }
+
 #series-list { padding: 0.5rem 1.5rem 3rem; }
 
 .series-row {
