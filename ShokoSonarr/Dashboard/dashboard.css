@@ -349,6 +349,19 @@ button.primary:hover { background: var(--amber-dim); color: var(--ink); }
   background: var(--amber-dim);
 }
 
+.profile-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-end;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  background: var(--bg-inset);
+  border-radius: var(--radius);
+}
+.profile-editor label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.72rem; color: var(--ink-dim); }
+
 #pending-list .pending-row {
   display: flex;
   justify-content: space-between;

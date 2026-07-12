@@ -164,6 +164,19 @@ function renderSeries(snapshot) {
     }
     if (currentOverride === null) specialsToggle.title = 'Following the global specials setting';
     rowActions.appendChild(specialsToggle);
+
+    const profileToggle = document.createElement('button');
+    profileToggle.textContent = 'Profile';
+    profileToggle.title = (series.QualityProfileIdOverride || series.RootFolderPathOverride)
+      ? 'This series has a Sonarr profile/root-folder override set'
+      : 'Set a per-series Sonarr quality profile / root folder override';
+    if (series.QualityProfileIdOverride || series.RootFolderPathOverride) profileToggle.classList.add('active');
+    profileToggle.onclick = (e) => {
+      e.stopPropagation();
+      toggleProfileEditor(row, series);
+    };
+    rowActions.appendChild(profileToggle);
+
     row.appendChild(rowActions);
 
     container.appendChild(row);
@@ -178,6 +191,56 @@ async function addAndSearch(series) {
   });
   alert(result.Success ? 'Search triggered.' : `Failed: ${result.Message}`);
   await loadScanResults();
+}
+
+async function toggleProfileEditor(row, series) {
+  const existingEditor = row.querySelector('.profile-editor');
+  if (existingEditor) {
+    existingEditor.remove();
+    return;
+  }
+
+  const editor = document.createElement('div');
+  editor.className = 'profile-editor';
+  editor.innerHTML = `
+    <label>Quality Profile <select class="profile-editor-quality"><option value="">Use global default</option></select></label>
+    <label>Root Folder <select class="profile-editor-root"><option value="">Use global default</option></select></label>
+    <button class="profile-editor-save primary">Save</button>
+  `;
+  row.appendChild(editor);
+
+  const stored = await fetchJson('/Settings');
+  const settings = { baseUrl: stored.Data.BaseUrl, apiKey: '', scanIntervalHours: 0, includeSpecials: false, hideUnaired: false, notificationWebhookUrl: '' };
+  const options = await fetchJson('/Settings/sonarr-options', { method: 'POST', body: JSON.stringify(settings) });
+  if (options.Success) {
+    const qualitySelect = editor.querySelector('.profile-editor-quality');
+    for (const p of options.Data.qualityProfiles || []) {
+      const opt = document.createElement('option');
+      opt.value = p.Id;
+      opt.textContent = p.Name;
+      if (series.QualityProfileIdOverride === p.Id) opt.selected = true;
+      qualitySelect.appendChild(opt);
+    }
+    const rootSelect = editor.querySelector('.profile-editor-root');
+    for (const f of options.Data.rootFolders || []) {
+      const opt = document.createElement('option');
+      opt.value = f.Path;
+      opt.textContent = f.Path;
+      if (series.RootFolderPathOverride === f.Path) opt.selected = true;
+      rootSelect.appendChild(opt);
+    }
+  }
+
+  editor.querySelector('.profile-editor-save').onclick = async (e) => {
+    e.stopPropagation();
+    const qualityProfileId = Number(editor.querySelector('.profile-editor-quality').value) || null;
+    const rootFolderPath = editor.querySelector('.profile-editor-root').value || null;
+    const result = await fetchJson(`/Scan/series/${series.ShokoSeriesId}/sonarr-override`, {
+      method: 'PUT',
+      body: JSON.stringify({ qualityProfileId, rootFolderPath }),
+    });
+    renderSeries(result);
+  };
 }
 
 function updateBulkActionsBar() {
