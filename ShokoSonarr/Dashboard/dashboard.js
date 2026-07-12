@@ -541,8 +541,13 @@ function renderSuggestions(suggestions) {
     row.appendChild(text);
 
     const addBtn = document.createElement('button');
-    addBtn.textContent = 'Add to Sonarr';
-    addBtn.onclick = () => searchTitleForSuggestion(s.RelatedTitle, row, addBtn);
+    if (s.RelatedType === 'Movie') {
+      addBtn.textContent = 'Add to Radarr';
+      addBtn.onclick = () => searchRadarrTitleForSuggestion(s.RelatedTitle, row, addBtn);
+    } else {
+      addBtn.textContent = 'Add to Sonarr';
+      addBtn.onclick = () => searchTitleForSuggestion(s.RelatedTitle, row, addBtn);
+    }
     row.appendChild(addBtn);
 
     container.appendChild(row);
@@ -604,6 +609,36 @@ async function addDiscoverySeries(tvdbId, title, candidatesContainer) {
     body: JSON.stringify({ tvdbId, title }),
   });
   alert(result.Success ? `Added ${title}.` : `Failed: ${result.Message}`);
+  if (result.Success)
+    candidatesContainer.remove();
+}
+
+async function searchRadarrTitleForSuggestion(title, row, triggerBtn) {
+  triggerBtn.disabled = true;
+  triggerBtn.textContent = 'Searching…';
+  const result = await fetchJson('/Radarr/search-title', { method: 'POST', body: JSON.stringify({ title }) });
+  triggerBtn.remove();
+
+  if (!result.Success || !result.Data || result.Data.length === 0) {
+    const none = document.createElement('div');
+    none.className = 'suggestion-candidates-empty';
+    none.textContent = result.Message || 'No Radarr matches found.';
+    row.appendChild(none);
+    return;
+  }
+
+  const candidates = document.createElement('div');
+  candidates.className = 'suggestion-candidates';
+  renderCandidateButtons(candidates, result.Data, (candidate) => addRadarrDiscoveryMovie(candidate.TmdbId, candidate.Title, candidates));
+  row.appendChild(candidates);
+}
+
+async function addRadarrDiscoveryMovie(tmdbId, title, candidatesContainer) {
+  const result = await fetchJson('/Radarr/add-discovery', {
+    method: 'POST',
+    body: JSON.stringify({ tmdbId, title }),
+  });
+  alert(result.Success ? `Added ${title} to Radarr.` : `Failed: ${result.Message}`);
   if (result.Success)
     candidatesContainer.remove();
 }
