@@ -127,10 +127,14 @@ jobs:
         with:
           ref: master
           fetch-depth: 0
+          # RELEASE_PAT (a PAT for an admin user) is required to push directly to master:
+          # branch protection's bypass allowance for required PRs only applies to org-owned
+          # repos, and GITHUB_TOKEN's github-actions[bot] identity has no such bypass here.
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Update Manifest
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           TAG="${{ github.event.inputs.tag_name || github.event.release.tag_name }}"
           if [[ ! "$TAG" =~ ^v[0-9] ]]; then
