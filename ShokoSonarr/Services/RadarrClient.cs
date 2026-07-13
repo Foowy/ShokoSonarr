@@ -6,39 +6,10 @@ using ShokoSonarr.Models;
 namespace ShokoSonarr.Services;
 
 /// <summary>Typed HTTP client for Radarr's v3 API. Never throws on HTTP/connectivity failure — all calls return a typed result. Mirrors SonarrClient's shape; reuses SonarrActionResult/SonarrQualityProfileResource/SonarrRootFolderResource since Radarr's v3 API shares the same *arr-family conventions.</summary>
-public class RadarrClient(HttpClient httpClient)
+public class RadarrClient(HttpClient httpClient) : ArrClientBase(httpClient)
 {
-    private static readonly JsonSerializerOptions s_jsonOptions = new(JsonSerializerDefaults.Web);
-
-    private HttpRequestMessage BuildRequest(HttpMethod method, RadarrSettings settings, string path)
-    {
-        // A null/blank BaseUrl (e.g. Radarr never configured) produces a relative URI here rather than
-        // throwing — HttpClient.SendAsync then fails with a catchable InvalidOperationException instead
-        // of crashing the request outside SendAsync's try/catch.
-        var request = new HttpRequestMessage(method, $"{settings.BaseUrl?.TrimEnd('/') ?? string.Empty}{path}");
-        request.Headers.Add("X-Api-Key", settings.ApiKey);
-        return request;
-    }
-
-    private async Task<SonarrActionResult<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct)
-    {
-        try
-        {
-            using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-                return SonarrActionResult<T>.Fail($"Radarr returned {(int)response.StatusCode} {response.ReasonPhrase}");
-
-            if (typeof(T) == typeof(bool))
-                return SonarrActionResult<T>.Ok((T)(object)true);
-
-            var data = await response.Content.ReadFromJsonAsync<T>(s_jsonOptions, ct).ConfigureAwait(false);
-            return data is null ? SonarrActionResult<T>.Fail("Radarr returned an empty response body") : SonarrActionResult<T>.Ok(data);
-        }
-        catch (Exception ex)
-        {
-            return SonarrActionResult<T>.Fail(ex.Message);
-        }
-    }
+    private HttpRequestMessage BuildRequest(HttpMethod method, RadarrSettings settings, string path) =>
+        BuildRequest(method, settings.BaseUrl, settings.ApiKey, path);
 
     /// <summary>Validates connectivity and API key against Radarr's system status endpoint.</summary>
     public Task<SonarrActionResult<bool>> TestConnectionAsync(RadarrSettings settings, CancellationToken ct = default) =>
@@ -60,7 +31,7 @@ public class RadarrClient(HttpClient httpClient)
             rootFolderPath,
             monitored = true,
             addOptions = new { searchForMovie = searchOnAdd },
-        }, options: s_jsonOptions);
+        }, options: JsonOptions);
 
         var result = await SendAsync<JsonElement>(request, ct).ConfigureAwait(false);
         if (!result.Success)

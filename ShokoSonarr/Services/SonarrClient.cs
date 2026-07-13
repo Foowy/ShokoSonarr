@@ -31,39 +31,10 @@ public record SonarrSeriesResource([property: JsonPropertyName("id")] int Id);
 public record SonarrTagResource([property: JsonPropertyName("id")] int Id, [property: JsonPropertyName("label")] string Label);
 
 /// <summary>Typed HTTP client for Sonarr's v3 API. Never throws on HTTP/connectivity failure — all calls return a typed result.</summary>
-public class SonarrClient(HttpClient httpClient)
+public class SonarrClient(HttpClient httpClient) : ArrClientBase(httpClient)
 {
-    private static readonly JsonSerializerOptions s_jsonOptions = new(JsonSerializerDefaults.Web);
-
-    private HttpRequestMessage BuildRequest(HttpMethod method, SonarrSettings settings, string path)
-    {
-        // A null/blank BaseUrl (e.g. Sonarr never configured) produces a relative URI here rather than
-        // throwing — HttpClient.SendAsync then fails with a catchable InvalidOperationException instead
-        // of crashing the request outside SendAsync's try/catch.
-        var request = new HttpRequestMessage(method, $"{settings.BaseUrl?.TrimEnd('/') ?? string.Empty}{path}");
-        request.Headers.Add("X-Api-Key", settings.ApiKey);
-        return request;
-    }
-
-    private async Task<SonarrActionResult<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct)
-    {
-        try
-        {
-            using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-                return SonarrActionResult<T>.Fail($"Sonarr returned {(int)response.StatusCode} {response.ReasonPhrase}");
-
-            if (typeof(T) == typeof(bool))
-                return SonarrActionResult<T>.Ok((T)(object)true);
-
-            var data = await response.Content.ReadFromJsonAsync<T>(s_jsonOptions, ct).ConfigureAwait(false);
-            return data is null ? SonarrActionResult<T>.Fail("Sonarr returned an empty response body") : SonarrActionResult<T>.Ok(data);
-        }
-        catch (Exception ex)
-        {
-            return SonarrActionResult<T>.Fail(ex.Message);
-        }
-    }
+    private HttpRequestMessage BuildRequest(HttpMethod method, SonarrSettings settings, string path) =>
+        BuildRequest(method, settings.BaseUrl, settings.ApiKey, path);
 
     /// <summary>Validates connectivity and API key against Sonarr's system status endpoint.</summary>
     public Task<SonarrActionResult<bool>> TestConnectionAsync(SonarrSettings settings, CancellationToken ct = default) =>
@@ -90,7 +61,7 @@ public class SonarrClient(HttpClient httpClient)
             monitored = true,
             tags = tagIds ?? [],
             addOptions = new { monitor = monitorMode, searchForMissingEpisodes = searchOnAdd },
-        }, options: s_jsonOptions);
+        }, options: JsonOptions);
 
         var result = await SendAsync<JsonElement>(request, ct).ConfigureAwait(false);
         if (!result.Success)
@@ -121,7 +92,7 @@ public class SonarrClient(HttpClient httpClient)
     public async Task<SonarrActionResult<SonarrTagResource>> CreateTagAsync(SonarrSettings settings, string label, CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Post, settings, "/api/v3/tag");
-        request.Content = JsonContent.Create(new { label }, options: s_jsonOptions);
+        request.Content = JsonContent.Create(new { label }, options: JsonOptions);
         return await SendAsync<SonarrTagResource>(request, ct).ConfigureAwait(false);
     }
 
@@ -154,7 +125,7 @@ public class SonarrClient(HttpClient httpClient)
         series["tags"] = tags;
 
         var putRequest = BuildRequest(HttpMethod.Put, settings, $"/api/v3/series/{sonarrSeriesId}");
-        putRequest.Content = JsonContent.Create(series, options: s_jsonOptions);
+        putRequest.Content = JsonContent.Create(series, options: JsonOptions);
         return await SendAsync<bool>(putRequest, ct).ConfigureAwait(false);
     }
 
@@ -166,7 +137,7 @@ public class SonarrClient(HttpClient httpClient)
     public Task<SonarrActionResult<bool>> MonitorEpisodesAsync(SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Put, settings, "/api/v3/episode/monitor");
-        request.Content = JsonContent.Create(new { episodeIds = sonarrEpisodeIds, monitored = true }, options: s_jsonOptions);
+        request.Content = JsonContent.Create(new { episodeIds = sonarrEpisodeIds, monitored = true }, options: JsonOptions);
         return SendAsync<bool>(request, ct);
     }
 
@@ -174,7 +145,7 @@ public class SonarrClient(HttpClient httpClient)
     public virtual Task<SonarrActionResult<bool>> UnmonitorEpisodesAsync(SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Put, settings, "/api/v3/episode/monitor");
-        request.Content = JsonContent.Create(new { episodeIds = sonarrEpisodeIds, monitored = false }, options: s_jsonOptions);
+        request.Content = JsonContent.Create(new { episodeIds = sonarrEpisodeIds, monitored = false }, options: JsonOptions);
         return SendAsync<bool>(request, ct);
     }
 
@@ -182,7 +153,7 @@ public class SonarrClient(HttpClient httpClient)
     public Task<SonarrActionResult<bool>> TriggerEpisodeSearchAsync(SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Post, settings, "/api/v3/command");
-        request.Content = JsonContent.Create(new { name = "EpisodeSearch", episodeIds = sonarrEpisodeIds }, options: s_jsonOptions);
+        request.Content = JsonContent.Create(new { name = "EpisodeSearch", episodeIds = sonarrEpisodeIds }, options: JsonOptions);
         return SendAsync<bool>(request, ct);
     }
 }
