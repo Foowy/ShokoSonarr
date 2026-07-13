@@ -13,7 +13,7 @@
   <PropertyGroup>
     <Title>Shoko Sonarr</Title>
     <Authors>Foowy</Authors>
-    <Version>0.4.1</Version>
+    <Version>0.4.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
