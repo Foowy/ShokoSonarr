@@ -10,7 +10,7 @@ public static class ShokoSonarrConstants
     public const string Description = "Scans your Shoko collection for missing episodes and bridges them to Sonarr for automated download.";
 
     /// <summary>Current version string.</summary>
-    public const string Version = "0.3.2";
+    public const string Version = "0.4.1";
 
     /// <summary>API version used for versioning attributes and Swagger doc grouping.</summary>
     public const string ApiVersion = "1.0";

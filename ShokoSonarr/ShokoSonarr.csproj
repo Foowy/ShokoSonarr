@@ -3,7 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RepositoryUrl>https://github.com/Foowy/shoko_sonarr</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Foowy/ShokoSonarr</RepositoryUrl>
     <PackageTags>hosted-service, sonarr, missing-episodes</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -13,7 +13,7 @@
   <PropertyGroup>
     <Title>Shoko Sonarr</Title>
     <Authors>Foowy</Authors>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
