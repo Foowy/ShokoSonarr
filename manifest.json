@@ -25,19 +25,19 @@
           "runtime": "linux-arm64",
           "abstraction": "6.0.0",
           "url": "https://github.com/Foowy/ShokoSonarr/releases/download/v0.4.1/ShokoSonarr-v0.4.1_linux-arm64.zip",
-          "checksum": "627b1937230a1c71b25ea92dccec41c2cda11c6834cea2ca6be7f1fe35d913ac"
+          "checksum": "ec2104b0556bccc2141ed007892be7e9f31c24bf35f365716e5898debba80ef7"
         },
         {
           "runtime": "linux-x64",
           "abstraction": "6.0.0",
           "url": "https://github.com/Foowy/ShokoSonarr/releases/download/v0.4.1/ShokoSonarr-v0.4.1_linux-x64.zip",
-          "checksum": "21b06ed000e3c6d6b20e197f47d837421635c3397da06f657958bd6024e0802b"
+          "checksum": "e0a11a531c3931dc2d8b3520c10af1f5755ab1645388d7b1465c05a7817d1539"
         },
         {
           "runtime": "win-x64",
           "abstraction": "6.0.0",
           "url": "https://github.com/Foowy/ShokoSonarr/releases/download/v0.4.1/ShokoSonarr-v0.4.1_win-x64.zip",
-          "checksum": "bbaeb5c1522c9913b22135611fbf9be86da38006b6ff0310ddefa4032571657e"
+          "checksum": "b63f2309611eb2833ec1285f8806246288bf9c6d1501ff13022c8787e9e86aee"
         }
       ]
     },
