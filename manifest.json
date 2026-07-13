@@ -14,6 +14,34 @@
   "image_url": "https://raw.githubusercontent.com/Foowy/shoko_sonarr/master/assets/master_shokosonarr.png",
   "releases": [
     {
+      "version": "0.4.0",
+      "tag": "v0.4.0",
+      "source_revision": "c1ed10df5d90639f9009d323ed2bc9385ba30315",
+      "released_at": "2026-07-13T00:33:20Z",
+      "channel": "Stable",
+      "release_notes": "**Full Changelog**: https://github.com/Foowy/shoko_sonarr/compare/v0.3.2...v0.4.0",
+      "archives": [
+        {
+          "runtime": "linux-arm64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/Foowy/shoko_sonarr/releases/download/v0.4.0/ShokoSonarr-v0.4.0_linux-arm64.zip",
+          "checksum": "df9e3562eb3cd4d5f48d8975162712d72cdd6387c168005a09eec5596e5c39ea"
+        },
+        {
+          "runtime": "linux-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/Foowy/shoko_sonarr/releases/download/v0.4.0/ShokoSonarr-v0.4.0_linux-x64.zip",
+          "checksum": "558703903dc613a45b1e5ba5ebf614ffb49371dba8dc02886cb5e5e41ae4d6f5"
+        },
+        {
+          "runtime": "win-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/Foowy/shoko_sonarr/releases/download/v0.4.0/ShokoSonarr-v0.4.0_win-x64.zip",
+          "checksum": "6f4155dd16c3dff17f0daeae53ab0b89a70c9f16843a89fa57966d458f447f3e"
+        }
+      ]
+    },
+    {
       "version": "0.3.2",
       "tag": "v0.3.2",
       "source_revision": "8cf723634a56a9a3a2aeadb3707c5a7e438268b6",
