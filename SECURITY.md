@@ -3,7 +3,7 @@
 ## Reporting a Vulnerability
 
 Please report security vulnerabilities using GitHub's private reporting flow rather than
-a public issue: go to the [Security tab](https://github.com/Foowy/shoko_sonarr/security)
+a public issue: go to the [Security tab](https://github.com/Foowy/ShokoSonarr/security)
 and select "Report a vulnerability".
 
 This project follows the same reporting process as

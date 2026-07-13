@@ -3,7 +3,7 @@
   "name": "Shoko Sonarr",
   "overview": "Scans your Shoko collection for missing episodes and bridges them to Sonarr for automated download, with related-series discovery routed to Sonarr or Radarr.",
   "authors": "Foowy",
-  "repository_url": "https://github.com/Foowy/shoko_sonarr",
+  "repository_url": "https://github.com/Foowy/ShokoSonarr",
   "homepage_url": null,
   "tags": [
     "hosted-service",
@@ -11,7 +11,7 @@
     "radarr",
     "missing-episodes"
   ],
-  "image_url": "https://raw.githubusercontent.com/Foowy/shoko_sonarr/master/assets/master_shokosonarr.png",
+  "image_url": "https://raw.githubusercontent.com/Foowy/ShokoSonarr/master/assets/master_shokosonarr.png",
   "releases": [
     {
       "version": "0.4.0",
