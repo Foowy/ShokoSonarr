@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.0" ExcludeAssets="runtime" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.1" ExcludeAssets="runtime" />
     <PackageReference Include="Shoko.Abstractions" Version="6.0.0-alpha.72" ExcludeAssets="runtime" />
     <PackageReference Include="NLog" Version="6.1.4" ExcludeAssets="runtime" />
     <PackageReference Include="LiteDB" Version="5.0.21" />
