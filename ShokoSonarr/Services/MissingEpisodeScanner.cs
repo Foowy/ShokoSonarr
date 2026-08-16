@@ -23,8 +23,7 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
         var pendingByKey = pending.ToLookup(p => (p.ShokoSeriesId, p.AnidbEpisodeId));
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        // Tracks every episode that's actually missing (regardless of HideUnaired), so reconciliation
-        // never mistakes "hidden from the dashboard because it hasn't aired" for "no longer missing".
+        // Tracks every actually-missing episode regardless of HideUnaired, so reconciliation doesn't mistake "hidden because unaired" for "no longer missing".
         var stillMissingKeys = new HashSet<(int ShokoSeriesId, int AnidbEpisodeId)>();
 
         foreach (var series in metadataService.GetAllShokoSeries())

@@ -14,8 +14,7 @@ public class DashboardController : ControllerBase
 {
     private static readonly FileExtensionContentTypeProvider s_contentTypeProvider = new();
 
-    // AppContext.BaseDirectory resolves to the host's directory when loaded via the
-    // plugin AssemblyLoadContext, not this assembly's own folder — use its location instead.
+    // AppContext.BaseDirectory resolves to the host's directory under the plugin AssemblyLoadContext, not this assembly's folder.
     private static readonly string s_dashboardDir = Path.Combine(
         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppContext.BaseDirectory,
         "dashboard");

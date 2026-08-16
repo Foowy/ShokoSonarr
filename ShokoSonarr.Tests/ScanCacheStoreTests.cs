@@ -337,9 +337,7 @@ public class ScanCacheStoreTests : IDisposable
     [Fact]
     public void AddHistoryEntry_BeyondCap_WithSharedTimestamps_OnlyTrimsOldestOverflowNotWholeBatch()
     {
-        // Simulates MonitorAndSearchAsync triggering several episodes in one call, which all get the same
-        // triggeredAt timestamp -- a timestamp-keyed cutoff would delete the entire shared-timestamp batch
-        // instead of just the oldest `overflow` entries.
+        // A timestamp-keyed cutoff would delete the entire shared-timestamp batch instead of just the oldest overflow entries.
         var sharedTimestamp = DateTime.UtcNow.AddDays(-1);
         for (var i = 0; i < 503; i++)
         {
