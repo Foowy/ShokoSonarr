@@ -40,8 +40,8 @@ public class SonarrControllerTests : IDisposable
         var handler = new FakeHandler(respond);
         var httpClient = new HttpClient(handler);
         var sonarrClient = new SonarrClient(httpClient);
-        var matcher = new SeriesMatcher(sonarrClient);
         var notificationService = new NotificationService(httpClient); // no webhook configured — NotifyAsync no-ops
+        var matcher = new SeriesMatcher(sonarrClient, cacheStore, notificationService);
         return new SonarrController(matcher, sonarrClient, cacheStore, notificationService);
     }
 
@@ -196,8 +196,10 @@ public class SonarrControllerTests : IDisposable
 
         var result = await controller.Search(new SearchRequest(1, 42, [10]));
 
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        var response = Assert.IsType<ShokoSonarrBaseController.ApiResponse<object>>(badRequest.Value);
+        // All MonitorAndSearchAsync failures (mapping included) now surface as Conflict via the shared
+        // SeriesMatcher method — the dashboard only checks response.Success/.Message, never the status code.
+        var conflict = Assert.IsType<ConflictObjectResult>(result);
+        var response = Assert.IsType<ShokoSonarrBaseController.ApiResponse<object>>(conflict.Value);
         Assert.False(response.Success);
     }
 
