@@ -19,6 +19,13 @@ public class SeriesMatcherTests
     private static SonarrClient MakeClient(Func<HttpRequestMessage, HttpResponseMessage> respond) =>
         new(new HttpClient(new FakeHandler(respond)));
 
+    private static SeriesMatcher MakeMatcher(SonarrClient client)
+    {
+        var cacheStore = new ScanCacheStore(Path.Combine(Path.GetTempPath(), "shoko-sonarr-tests-" + Guid.NewGuid()));
+        var notificationService = new NotificationService(new HttpClient(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK))));
+        return new SeriesMatcher(client, cacheStore, notificationService);
+    }
+
     [Fact]
     public async Task ResolveAsync_SeriesWithKnownTvdbId_AutoResolvesWhenSonarrConfirms()
     {
@@ -26,7 +33,7 @@ public class SeriesMatcherTests
         {
             Content = new StringContent("""[{"tvdbId":81797,"title":"One Piece","year":1999}]"""),
         });
-        var matcher = new SeriesMatcher(client);
+        var matcher = MakeMatcher(client);
         var series = new SeriesMissingResult { ShokoSeriesId = 1, Title = "One Piece", TvdbId = 81797 };
 
         var resolution = await matcher.ResolveAsync(TestSettings, series);
@@ -42,7 +49,7 @@ public class SeriesMatcherTests
         {
             Content = new StringContent("""[{"tvdbId":12345,"title":"Frieren","year":2023},{"tvdbId":67890,"title":"Frieren: Beyond Journey's End","year":2023}]"""),
         });
-        var matcher = new SeriesMatcher(client);
+        var matcher = MakeMatcher(client);
         var series = new SeriesMissingResult { ShokoSeriesId = 2, Title = "Frieren", TvdbId = null };
 
         var resolution = await matcher.ResolveAsync(TestSettings, series);
@@ -56,7 +63,7 @@ public class SeriesMatcherTests
     public async Task ResolveAsync_NoTvdbIdAndNoTitleMatches_ReturnsNoMatchError()
     {
         var client = MakeClient(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") });
-        var matcher = new SeriesMatcher(client);
+        var matcher = MakeMatcher(client);
         var series = new SeriesMissingResult { ShokoSeriesId = 3, Title = "Some Obscure Anime", TvdbId = null };
 
         var resolution = await matcher.ResolveAsync(TestSettings, series);
