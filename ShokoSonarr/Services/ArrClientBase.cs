@@ -13,9 +13,7 @@ public abstract class ArrClientBase(HttpClient httpClient)
 
     private protected HttpRequestMessage BuildRequest(HttpMethod method, string? baseUrl, string? apiKey, string path)
     {
-        // A null/blank BaseUrl (e.g. the service was never configured) produces a relative URI here rather
-        // than throwing — HttpClient.SendAsync then fails with a catchable InvalidOperationException instead
-        // of crashing the request outside SendAsync's try/catch.
+        // A null/blank BaseUrl produces a relative URI here rather than throwing, so the failure surfaces inside SendAsync's try/catch instead of crashing the caller.
         var request = new HttpRequestMessage(method, $"{baseUrl?.TrimEnd('/') ?? string.Empty}{path}");
         request.Headers.Add("X-Api-Key", apiKey);
         return request;

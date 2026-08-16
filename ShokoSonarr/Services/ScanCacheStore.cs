@@ -142,9 +142,7 @@ public class ScanCacheStore : IDisposable
         var overflow = col.Count() - MaxHistoryEntries;
         if (overflow > 0)
         {
-            // Keyed on Id (insertion order), not TimestampUtc: multiple entries from the same call (e.g.
-            // triggering a multi-episode search) share an identical timestamp, so a timestamp-based cutoff
-            // could delete an entire same-timestamp batch instead of just the oldest `overflow` entries.
+            // Keyed on Id, not TimestampUtc: entries from the same call can share an identical timestamp, which would let a timestamp-based cutoff delete a whole batch instead of just the oldest overflow entries.
             var cutoffId = col.FindAll().OrderBy(e => e.Id).Skip(overflow - 1).First().Id;
             col.DeleteMany(e => e.Id <= cutoffId);
         }

@@ -126,9 +126,7 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
         if (qualityProfileId is null || string.IsNullOrEmpty(rootFolderPath))
             return BadRequest(new ApiResponse<object>(Success: false, Message: "Quality profile and root folder must be configured in Settings before adding a series.", Data: null));
 
-        // A series matched by TVDB ID may already exist in the user's Sonarr instance (lookup returns
-        // candidates regardless of whether they're already added) — check for that first so this single
-        // action works whether or not the series is new.
+        // Lookup returns candidates regardless of whether already added, so check existence first — this single action must work whether the series is new or not.
         var existing = await sonarrClient.GetExistingSeriesByTvdbIdAsync(settings, request.TvdbId);
         if (existing.Success && existing.Data!.Count > 0)
             return await MonitorAndSearchAsync(settings, request.ShokoSeriesId, existing.Data[0].Id, request.AnidbEpisodeIds, series);
@@ -178,8 +176,7 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
         if (!episodesResult.Success)
             return Conflict(new ApiResponse<object>(Success: false, Message: episodesResult.ErrorMessage, Data: null));
 
-        // Map AniDB episode numbers (normal episodes only map cleanly to Sonarr season 1+; specials map to Sonarr's season 0)
-        // to Sonarr episode IDs by season/episode number.
+        // Normal episodes map to Sonarr season 1+; specials map to Sonarr's season 0.
         var targetEpisodes = series.MissingEpisodes.Where(e => anidbEpisodeIds.Contains(e.AnidbEpisodeId)).ToList();
         var sonarrEpisodeIds = new List<int>();
         var sonarrEpisodeIdByAnidbId = new Dictionary<int, int>();
