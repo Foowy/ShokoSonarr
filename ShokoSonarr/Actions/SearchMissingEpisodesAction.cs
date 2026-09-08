@@ -15,16 +15,16 @@ public class SearchMissingEpisodesAction(SeriesMatcher matcher, SonarrClient son
     public override string Name => "Search Missing Episodes in Sonarr";
 
     /// <inheritdoc/>
-    public string? Description => "Triggers a Sonarr search for every episode this series is currently missing.";
+    public override string? Description => "Triggers a Sonarr search for every episode this series is currently missing.";
 
     /// <inheritdoc/>
-    public ActionCategory Category => ActionCategory.PluginInferred;
+    public override ActionCategory Category => ActionCategory.PluginInferred;
 
     /// <inheritdoc/>
     public override ActionPermission Permission => ActionPermission.Admin;
 
     /// <inheritdoc/>
-    public async Task<ActionValidationResult?> Validate(CancellationToken token = default)
+    public override async Task<ActionValidationResult?> Validate(CancellationToken token = default)
     {
         var series = FindSeries();
         if (series is null)
