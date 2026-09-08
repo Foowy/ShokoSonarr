@@ -19,14 +19,20 @@ public class DashboardController : ControllerBase
         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppContext.BaseDirectory,
         "dashboard");
 
+    // Read once for the process lifetime -- a dashboard rebuild needs a plugin reload (container restart)
+    // anyway, so this never goes stale in practice. Lazy so a mis-deployed plugin still 404s at request
+    // time rather than throwing at type-init.
+    private static readonly Lazy<string?> s_dashboardHtml = new(() =>
+    {
+        var indexPath = Path.Combine(s_dashboardDir, "dashboard.html");
+        return IoFile.Exists(indexPath) ? IoFile.ReadAllText(indexPath) : null;
+    });
+
     /// <summary>Serves the main dashboard page.</summary>
     /// <returns>The dashboard HTML content.</returns>
     [HttpGet("dashboard")]
-    public IActionResult GetDashboardPage()
-    {
-        var indexPath = Path.Combine(s_dashboardDir, "dashboard.html");
-        return IoFile.Exists(indexPath) ? Content(IoFile.ReadAllText(indexPath), "text/html") : NotFound();
-    }
+    public IActionResult GetDashboardPage() =>
+        s_dashboardHtml.Value is { } html ? Content(html, "text/html") : NotFound();
 
     /// <summary>Serves static assets (CSS, JS) from the dashboard folder.</summary>
     /// <param name="path">The relative asset path.</param>
