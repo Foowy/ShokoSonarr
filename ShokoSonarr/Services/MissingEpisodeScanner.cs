@@ -14,8 +14,26 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
     /// <summary>Pending entries older than this are dropped even if Sonarr keeps rejecting the unmonitor call (e.g. the Sonarr episode was deleted out-of-band), so a permanently-failing entry doesn't retry forever.</summary>
     private static readonly TimeSpan MaxPendingAge = TimeSpan.FromDays(14);
 
+    // ponytail: single global lock -- two overlapping full scans just waste work and race SaveScan.
+    // Serializing is enough; no need to cache/share the in-flight result. Revisit only if a per-series
+    // scan ever needs to run concurrently with a full scan.
+    private readonly SemaphoreSlim _scanLock = new(1, 1);
+
     /// <summary>Runs a full scan, reconciles any pending Sonarr searches against the fresh results, and returns a snapshot of all series with at least one missing episode.</summary>
     public async Task<ScanSnapshot> ScanAsync(CancellationToken ct = default)
+    {
+        await _scanLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return await ScanInternalAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _scanLock.Release();
+        }
+    }
+
+    private async Task<ScanSnapshot> ScanInternalAsync(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var results = new List<SeriesMissingResult>();

@@ -564,4 +564,31 @@ public class MissingEpisodeScannerTests : IDisposable
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => scanner.ScanAsync(new CancellationToken(canceled: true)));
     }
+
+    [Fact]
+    public async Task Scan_TwoConcurrentCalls_DoNotOverlap()
+    {
+        var inFlight = 0;
+        var maxObserved = 0;
+
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(80);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+        series.Setup(s => s.Episodes).Returns([]);
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetAllShokoSeries()).Returns(() =>
+        {
+            var n = Interlocked.Increment(ref inFlight);
+            maxObserved = Math.Max(maxObserved, n);
+            Thread.Sleep(50);
+            Interlocked.Decrement(ref inFlight);
+            return [series.Object];
+        });
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        await Task.WhenAll(scanner.ScanAsync(), scanner.ScanAsync());
+
+        Assert.Equal(1, maxObserved);
+    }
 }
