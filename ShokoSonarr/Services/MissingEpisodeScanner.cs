@@ -126,6 +126,10 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
                     await ExpireIfStaleAsync(settings, entry, ct).ConfigureAwait(false);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 s_logger.Warn(ex, "ShokoSonarr: failed to unmonitor Sonarr episode {SonarrEpisodeId} for AniDB episode {AnidbEpisodeId}", entry.SonarrEpisodeId, entry.AnidbEpisodeId);
