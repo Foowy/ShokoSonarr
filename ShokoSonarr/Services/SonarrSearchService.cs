@@ -8,11 +8,11 @@ namespace ShokoSonarr.Services;
 public class SonarrSearchService(SonarrClient sonarrClient, ScanCacheStore cacheStore, NotificationService notificationService)
 {
     /// <returns>Success with an optional caveat message (unmapped episodes skipped), or failure with a reason.</returns>
-    public async Task<SonarrActionResult<string?>> MonitorAndSearchAsync(SonarrSettings settings, int shokoSeriesId, int sonarrSeriesId, List<int> anidbEpisodeIds, SeriesMissingResult series, CancellationToken ct = default)
+    public async Task<ArrActionResult<string?>> MonitorAndSearchAsync(SonarrSettings settings, int shokoSeriesId, int sonarrSeriesId, List<int> anidbEpisodeIds, SeriesMissingResult series, CancellationToken ct = default)
     {
         var episodesResult = await sonarrClient.GetEpisodesAsync(settings, sonarrSeriesId, ct);
         if (!episodesResult.Success)
-            return SonarrActionResult<string?>.Fail(episodesResult.ErrorMessage!);
+            return ArrActionResult<string?>.Fail(episodesResult.ErrorMessage!);
 
         var targetEpisodes = series.MissingEpisodes.Where(e => anidbEpisodeIds.Contains(e.AnidbEpisodeId)).ToList();
         // AniDB per-series episode numbers are absolute; for anime-typed Sonarr series they line up with
@@ -44,15 +44,15 @@ public class SonarrSearchService(SonarrClient sonarrClient, ScanCacheStore cache
         }
 
         if (sonarrEpisodeIds.Count == 0)
-            return SonarrActionResult<string?>.Fail($"No episodes could be mapped to Sonarr. Unmapped: {string.Join(", ", unmappedTitles)}");
+            return ArrActionResult<string?>.Fail($"No episodes could be mapped to Sonarr. Unmapped: {string.Join(", ", unmappedTitles)}");
 
         var monitorResult = await sonarrClient.MonitorEpisodesAsync(settings, sonarrEpisodeIds, ct);
         if (!monitorResult.Success)
-            return SonarrActionResult<string?>.Fail(monitorResult.ErrorMessage!);
+            return ArrActionResult<string?>.Fail(monitorResult.ErrorMessage!);
 
         var searchResult = await sonarrClient.TriggerEpisodeSearchAsync(settings, sonarrEpisodeIds, ct);
         if (!searchResult.Success)
-            return SonarrActionResult<string?>.Fail(searchResult.ErrorMessage!);
+            return ArrActionResult<string?>.Fail(searchResult.ErrorMessage!);
 
         var triggeredAt = DateTime.UtcNow;
         var historyEntries = new List<SearchHistoryEntry>();
@@ -84,6 +84,6 @@ public class SonarrSearchService(SonarrClient sonarrClient, ScanCacheStore cache
         await notificationService.NotifyAsync(settings, $"Triggered Sonarr search for {triggeredCount} episode(s) of **{series.Title}**");
 
         var message = unmappedTitles.Count > 0 ? $"Search triggered. Unmapped episodes skipped: {string.Join(", ", unmappedTitles)}" : null;
-        return SonarrActionResult<string?>.Ok(message);
+        return ArrActionResult<string?>.Ok(message);
     }
 }

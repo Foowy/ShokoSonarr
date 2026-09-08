@@ -19,23 +19,23 @@ public abstract class ArrClientBase(HttpClient httpClient)
         return request;
     }
 
-    private protected async Task<SonarrActionResult<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct)
+    private protected async Task<ArrActionResult<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct)
     {
         try
         {
             using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
-                return SonarrActionResult<T>.Fail($"{ServiceName} returned {(int)response.StatusCode} {response.ReasonPhrase}");
+                return ArrActionResult<T>.Fail($"{ServiceName} returned {(int)response.StatusCode} {response.ReasonPhrase}");
 
             if (typeof(T) == typeof(bool))
-                return SonarrActionResult<T>.Ok((T)(object)true);
+                return ArrActionResult<T>.Ok((T)(object)true);
 
             var data = await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct).ConfigureAwait(false);
-            return data is null ? SonarrActionResult<T>.Fail($"{ServiceName} returned an empty response body") : SonarrActionResult<T>.Ok(data);
+            return data is null ? ArrActionResult<T>.Fail($"{ServiceName} returned an empty response body") : ArrActionResult<T>.Ok(data);
         }
         catch (Exception ex)
         {
-            return SonarrActionResult<T>.Fail(ex.Message);
+            return ArrActionResult<T>.Fail(ex.Message);
         }
     }
 }

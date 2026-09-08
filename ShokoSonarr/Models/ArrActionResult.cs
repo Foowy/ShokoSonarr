@@ -1,7 +1,7 @@
 namespace ShokoSonarr.Models;
 
-/// <summary>Typed result envelope for Sonarr API calls — never throws on HTTP/connectivity failure, callers check <see cref="Success"/>.</summary>
-public class SonarrActionResult<T>
+/// <summary>Typed result envelope for *arr-family API calls — never throws on HTTP/connectivity failure, callers check <see cref="Success"/>.</summary>
+public class ArrActionResult<T>
 {
     /// <summary>Whether the call succeeded.</summary>
     public bool Success { get; init; }
@@ -13,8 +13,8 @@ public class SonarrActionResult<T>
     public string? ErrorMessage { get; init; }
 
     /// <summary>Builds a successful result.</summary>
-    public static SonarrActionResult<T> Ok(T data) => new() { Success = true, Data = data };
+    public static ArrActionResult<T> Ok(T data) => new() { Success = true, Data = data };
 
     /// <summary>Builds a failed result.</summary>
-    public static SonarrActionResult<T> Fail(string message) => new() { Success = false, ErrorMessage = message };
+    public static ArrActionResult<T> Fail(string message) => new() { Success = false, ErrorMessage = message };
 }

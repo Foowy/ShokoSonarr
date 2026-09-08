@@ -477,7 +477,7 @@ public class MissingEpisodeScannerTests : IDisposable
     {
         public ThrowingSonarrClient() : base(new HttpClient()) { }
 
-        public override Task<Models.SonarrActionResult<bool>> UnmonitorEpisodesAsync(Config.SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default) =>
+        public override Task<Models.ArrActionResult<bool>> UnmonitorEpisodesAsync(Config.SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default) =>
             throw new InvalidOperationException("boom");
     }
 
