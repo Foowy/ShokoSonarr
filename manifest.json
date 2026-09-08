@@ -14,6 +14,34 @@
   "image_url": "https://raw.githubusercontent.com/Foowy/ShokoSonarr/master/assets/master_shokosonarr.png",
   "releases": [
     {
+      "version": "0.5.0",
+      "tag": "v0.5.0",
+      "source_revision": "e59f7a10e34356419c632436761979d7f0d5a5e6",
+      "released_at": "2026-09-08T22:30:28Z",
+      "channel": "Stable",
+      "release_notes": "## What's Changed\n* fix: require authentication on all plugin controllers, fix stored XSS in dashboard by @Foowy in https://github.com/Foowy/ShokoSonarr/pull/15\n* Revert \"fix: require authentication on all plugin controllers, fix stored XSS in dashboard (#15)\" by @Foowy in https://github.com/Foowy/ShokoSonarr/pull/16\n* chore: trim inline comments to match current standard by @Foowy in https://github.com/Foowy/ShokoSonarr/pull/27\n* Bump xunit.runner.visualstudio from 3.1.5 to 4.0.0 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/26\n* Bump Microsoft.NET.Test.Sdk from 18.7.0 to 18.9.0 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/25\n* Bump Asp.Versioning.Mvc.ApiExplorer from 10.0.0 to 10.2.1 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/24\n* chore(deps): bump github/codeql-action from 4 to 4.37.3 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/21\n* chore(deps): bump actions/setup-dotnet from 5 to 6 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/17\n* Bump Shoko.Abstractions from 6.0.0-alpha.72 to 6.0.0-alpha.77 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/23\n* ci: auto-merge Dependabot patch/minor PRs once CI passes by @Foowy in https://github.com/Foowy/ShokoSonarr/pull/28\n* chore(deps): bump github/codeql-action from 4.37.3 to 4.37.7 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/30\n* chore(deps): bump dependabot/fetch-metadata from 2 to 3 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/29\n* Bump the nuget group with 2 updates by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/32\n* chore(deps): bump github/codeql-action from 4.37.7 to 4.37.9 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/33\n* Bump Shoko.Abstractions from 6.0.0-alpha.81 to 6.0.0-alpha.84 by @dependabot[bot] in https://github.com/Foowy/ShokoSonarr/pull/35\n* feat: adopt IExecutableAction for scan/search dashboard actions by @Foowy in https://github.com/Foowy/ShokoSonarr/pull/31\n* Code improvements batch + 0.5.0 by @Foowy in https://github.com/Foowy/ShokoSonarr/pull/36\n\n\n**Full Changelog**: https://github.com/Foowy/ShokoSonarr/compare/v0.4.2...v0.5.0",
+      "archives": [
+        {
+          "runtime": "linux-arm64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/Foowy/ShokoSonarr/releases/download/v0.5.0/ShokoSonarr-v0.5.0_linux-arm64.zip",
+          "checksum": "b7a9c1538dc7cd93b203885217e545ed7e38dbc35244c4a5d284091bfd9c4550"
+        },
+        {
+          "runtime": "linux-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/Foowy/ShokoSonarr/releases/download/v0.5.0/ShokoSonarr-v0.5.0_linux-x64.zip",
+          "checksum": "751d8fbd74380d299e10b382bc73eaa6630476b97f97093178abf4659d36c825"
+        },
+        {
+          "runtime": "win-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/Foowy/ShokoSonarr/releases/download/v0.5.0/ShokoSonarr-v0.5.0_win-x64.zip",
+          "checksum": "3918a82da16a2493f82bcc373221d3326b30347c4a08ca2fec2647f827688a88"
+        }
+      ]
+    },
+    {
       "version": "0.4.2",
       "tag": "v0.4.2",
       "source_revision": "89917d8ffeddef64eb09f6f37ca9d47af686eea8",
