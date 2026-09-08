@@ -354,4 +354,22 @@ public class ScanCacheStoreTests : IDisposable
 
         Assert.Equal(500, history.Count);
     }
+
+    [Fact]
+    public void AddHistoryEntries_OverCap_TrimsToMaxOnce()
+    {
+        var batch = Enumerable.Range(0, 600).Select(i => new SearchHistoryEntry
+        {
+            ShokoSeriesId = 1,
+            SeriesTitle = "S",
+            AnidbEpisodeId = i,
+            EpisodeTitle = "E",
+            Outcome = SearchHistoryOutcome.Triggered,
+            TimestampUtc = DateTime.UtcNow.AddSeconds(i),
+        });
+
+        _store.AddHistoryEntries(batch);
+
+        Assert.Equal(500, _store.GetHistory(1000).Count);
+    }
 }

@@ -467,6 +467,10 @@ public class MissingEpisodeScannerTests : IDisposable
 
         Assert.Empty(_cacheStore.GetPendingSearches());
         Assert.Single(handler.Requests);
+
+        var history = _cacheStore.GetHistory();
+        Assert.Single(history);
+        Assert.Equal(SearchHistoryOutcome.Descoped, history[0].Outcome);
     }
 
     private class ThrowingSonarrClient : SonarrClient

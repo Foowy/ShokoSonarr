@@ -44,6 +44,8 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
 
         // Tracks every actually-missing episode regardless of HideUnaired, so reconciliation doesn't mistake "hidden because unaired" for "no longer missing".
         var stillMissingKeys = new HashSet<(int ShokoSeriesId, int AnidbEpisodeId)>();
+        // Every non-hidden, file-less episode/special key regardless of the specials scope, so reconciliation can tell "imported" from "dropped from scope by an override".
+        var missingIgnoringScope = new HashSet<(int ShokoSeriesId, int AnidbEpisodeId)>();
 
         foreach (var series in metadataService.GetAllShokoSeries())
         {
@@ -54,13 +56,18 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
 
             foreach (var key in EnumerateMissingKeys(series, settings))
                 stillMissingKeys.Add(key);
+            foreach (var e in series.Episodes.Where(e => (e.Type == EpisodeType.Episode || e.Type == EpisodeType.Special) && !e.IsHidden && e.Videos.Count == 0))
+                missingIgnoringScope.Add((series.ID, e.AnidbEpisodeID));
 
             var result = BuildSeriesResult(series, settings, pendingByKey, today);
             if (result is not null)
                 results.Add(result);
         }
 
-        await ReconcilePendingSearchesAsync(pending, stillMissingKeys, settings, ct).ConfigureAwait(false);
+        var descopedKeys = new HashSet<(int ShokoSeriesId, int AnidbEpisodeId)>(missingIgnoringScope);
+        descopedKeys.ExceptWith(stillMissingKeys);
+
+        await ReconcilePendingSearchesAsync(pending, stillMissingKeys, descopedKeys, settings, ct).ConfigureAwait(false);
 
         return new ScanSnapshot
         {
@@ -146,7 +153,7 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
     /// <summary>For each pending search whose episode is no longer in the fresh missing-episode results, tells Sonarr to unmonitor it and clears the pending entry. A failed Sonarr call is logged and left pending for the next scan — it must never fail the scan itself.
     /// "No longer in the results" covers two cases treated identically: the episode was actually imported by Shoko, or it fell out of scan scope (e.g. a specials-exclude override was set after the search was triggered). Both mean the plugin should stop tracking it and tell Sonarr to stop chasing it.
     /// <paramref name="stillMissingKeys"/> deliberately ignores the HideUnaired display filter — an episode hidden from the dashboard because it hasn't aired yet is still missing, not reconciled.</summary>
-    private async Task ReconcilePendingSearchesAsync(List<PendingSearch> pending, HashSet<(int ShokoSeriesId, int AnidbEpisodeId)> stillMissingKeys, Config.SonarrSettings settings, CancellationToken ct)
+    private async Task ReconcilePendingSearchesAsync(List<PendingSearch> pending, HashSet<(int ShokoSeriesId, int AnidbEpisodeId)> stillMissingKeys, HashSet<(int ShokoSeriesId, int AnidbEpisodeId)> descopedKeys, Config.SonarrSettings settings, CancellationToken ct)
     {
         if (pending.Count == 0)
             return;
@@ -169,7 +176,9 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
                         SeriesTitle = entry.SeriesTitle,
                         AnidbEpisodeId = entry.AnidbEpisodeId,
                         EpisodeTitle = entry.EpisodeTitle,
-                        Outcome = SearchHistoryOutcome.Imported,
+                        Outcome = descopedKeys.Contains((entry.ShokoSeriesId, entry.AnidbEpisodeId))
+                            ? SearchHistoryOutcome.Descoped
+                            : SearchHistoryOutcome.Imported,
                         TimestampUtc = DateTime.UtcNow,
                     });
                 }

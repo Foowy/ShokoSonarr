@@ -86,6 +86,7 @@ public class SeriesMatcher(SonarrClient sonarrClient, ScanCacheStore cacheStore,
             return SonarrActionResult<string?>.Fail(searchResult.ErrorMessage!);
 
         var triggeredAt = DateTime.UtcNow;
+        var historyEntries = new List<SearchHistoryEntry>();
         foreach (var ep in targetEpisodes.Where(e => !unmappedIds.Contains(e.AnidbEpisodeId)))
         {
             cacheStore.AddPendingSearch(new PendingSearch
@@ -98,7 +99,7 @@ public class SeriesMatcher(SonarrClient sonarrClient, ScanCacheStore cacheStore,
                 SonarrEpisodeId = sonarrEpisodeIdByAnidbId[ep.AnidbEpisodeId],
                 TriggeredAtUtc = triggeredAt,
             });
-            cacheStore.AddHistoryEntry(new SearchHistoryEntry
+            historyEntries.Add(new SearchHistoryEntry
             {
                 ShokoSeriesId = shokoSeriesId,
                 SeriesTitle = series.Title,
@@ -108,6 +109,7 @@ public class SeriesMatcher(SonarrClient sonarrClient, ScanCacheStore cacheStore,
                 TimestampUtc = triggeredAt,
             });
         }
+        cacheStore.AddHistoryEntries(historyEntries);
 
         var triggeredCount = targetEpisodes.Count - unmappedIds.Count;
         await notificationService.NotifyAsync(settings, $"Triggered Sonarr search for {triggeredCount} episode(s) of **{series.Title}**");
