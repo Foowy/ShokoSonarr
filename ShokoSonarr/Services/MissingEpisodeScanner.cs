@@ -56,7 +56,7 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
 
             foreach (var key in EnumerateMissingKeys(series, settings))
                 stillMissingKeys.Add(key);
-            foreach (var e in series.Episodes.Where(e => (e.Type == EpisodeType.Episode || e.Type == EpisodeType.Special) && !e.IsHidden && e.Videos.Count == 0))
+            foreach (var e in series.Episodes.Where(e => (e.Type == EpisodeType.Episode || e.Type == EpisodeType.Special) && IsMissingVideo(e)))
                 missingIgnoringScope.Add((series.ID, e.AnidbEpisodeID));
 
             var result = BuildSeriesResult(series, settings, pendingByKey, today);
@@ -76,6 +76,9 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
         };
     }
 
+    /// <summary>An episode Shoko knows about but has no file for, and that isn't user-hidden — i.e. a candidate for a Sonarr search. Type-filtering (specials scope) is applied separately by each caller.</summary>
+    private static bool IsMissingVideo(IShokoEpisode e) => !e.IsHidden && e.Videos.Count == 0;
+
     /// <summary>The scanned episode types for a series, honoring the global setting and any per-series specials override.</summary>
     private EpisodeType[] ScannedTypesFor(IShokoSeries series, Config.SonarrSettings settings)
     {
@@ -88,7 +91,7 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
     {
         var scannedTypes = ScannedTypesFor(series, settings);
         return series.Episodes
-            .Where(e => scannedTypes.Contains(e.Type) && !e.IsHidden && e.Videos.Count == 0)
+            .Where(e => scannedTypes.Contains(e.Type) && IsMissingVideo(e))
             .Select(e => (series.ID, e.AnidbEpisodeID));
     }
 
@@ -100,7 +103,7 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
         var scannedTypes = ScannedTypesFor(series, settings);
 
         var missing = series.Episodes
-            .Where(e => scannedTypes.Contains(e.Type) && !e.IsHidden && e.Videos.Count == 0)
+            .Where(e => scannedTypes.Contains(e.Type) && IsMissingVideo(e))
             .Select(e => new MissingEpisodeInfo
             {
                 AnidbEpisodeId = e.AnidbEpisodeID,
