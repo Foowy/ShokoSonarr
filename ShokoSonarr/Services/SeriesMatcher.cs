@@ -38,12 +38,6 @@ public class SeriesMatcher(SonarrClient sonarrClient, ScanCacheStore cacheStore,
     /// Monitors and searches for the given missing episodes on a Sonarr series. Shared by the dashboard's
     /// add-and-search/search endpoints and the native <see cref="Actions.SearchMissingEpisodesAction"/>.
     /// </summary>
-    /// <remarks>
-    /// v1 limitation: AniDB episode numbers are mapped to Sonarr season/episode numbers by assuming a single
-    /// season of normal episodes (Sonarr season 1) plus specials (Sonarr season 0). TVDB series that split
-    /// this same AniDB run across multiple Sonarr seasons are not handled and may cause the wrong episode to
-    /// be searched. Full multi-season mapping is a known v2 improvement.
-    /// </remarks>
     /// <returns>Success with an optional caveat message (unmapped episodes skipped), or failure with a reason.</returns>
     public async Task<SonarrActionResult<string?>> MonitorAndSearchAsync(SonarrSettings settings, int shokoSeriesId, int sonarrSeriesId, List<int> anidbEpisodeIds, SeriesMissingResult series, CancellationToken ct = default)
     {
@@ -51,16 +45,23 @@ public class SeriesMatcher(SonarrClient sonarrClient, ScanCacheStore cacheStore,
         if (!episodesResult.Success)
             return SonarrActionResult<string?>.Fail(episodesResult.ErrorMessage!);
 
-        // Normal episodes map to Sonarr season 1+; specials map to Sonarr's season 0.
         var targetEpisodes = series.MissingEpisodes.Where(e => anidbEpisodeIds.Contains(e.AnidbEpisodeId)).ToList();
+        // AniDB per-series episode numbers are absolute; for anime-typed Sonarr series they line up with
+        // AbsoluteEpisodeNumber regardless of how TheTVDB splits the run into seasons. Series added before
+        // ShokoSonarr set seriesType=anime stay Standard and expose no absolute numbers -- fall back to the
+        // old (season 1, N) match for those so an upgrade doesn't silently unmap every legacy series.
+        var anySonarrAbsolute = episodesResult.Data!.Any(se => se.AbsoluteEpisodeNumber.HasValue);
         var sonarrEpisodeIds = new List<int>();
         var sonarrEpisodeIdByAnidbId = new Dictionary<int, int>();
         var unmappedIds = new List<int>();
         var unmappedTitles = new List<string>();
         foreach (var ep in targetEpisodes)
         {
-            var seasonNumber = ep.IsSpecial ? 0 : 1;
-            var match = episodesResult.Data!.Find(se => se.SeasonNumber == seasonNumber && se.EpisodeNumber == ep.EpisodeNumber);
+            SonarrEpisodeResource? match = ep.IsSpecial
+                ? episodesResult.Data!.Find(se => se.SeasonNumber == 0 && se.EpisodeNumber == ep.EpisodeNumber)
+                : anySonarrAbsolute
+                    ? episodesResult.Data!.Find(se => se.AbsoluteEpisodeNumber == ep.EpisodeNumber)
+                    : episodesResult.Data!.Find(se => se.SeasonNumber == 1 && se.EpisodeNumber == ep.EpisodeNumber);
             if (match is null)
             {
                 unmappedIds.Add(ep.AnidbEpisodeId);

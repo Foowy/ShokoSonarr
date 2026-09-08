@@ -12,7 +12,8 @@ namespace ShokoSonarr.Services;
 public record SonarrEpisodeResource(
     [property: JsonPropertyName("id")] int Id,
     [property: JsonPropertyName("seasonNumber")] int SeasonNumber,
-    [property: JsonPropertyName("episodeNumber")] int EpisodeNumber);
+    [property: JsonPropertyName("episodeNumber")] int EpisodeNumber,
+    [property: JsonPropertyName("absoluteEpisodeNumber")] int? AbsoluteEpisodeNumber = null);
 
 /// <summary>Sonarr quality profile resource, as returned by Sonarr's v3 API.</summary>
 public record SonarrQualityProfileResource(
