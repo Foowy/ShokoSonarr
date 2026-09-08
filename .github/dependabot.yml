@@ -8,6 +8,11 @@ updates:
       nuget:
         patterns:
           - "*"
+    ignore:
+      # Compile-only ref the Shoko host supplies at runtime -- must match the host's
+      # bundled version exactly (currently 10.0.0) or the plugin fails to load. Bump
+      # by hand against the host's /usr/src/app/build/Shoko.Server.deps.json.
+      - dependency-name: "Asp.Versioning.*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
