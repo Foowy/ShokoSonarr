@@ -46,7 +46,7 @@ public class MissingEpisodeScannerTests : IDisposable
         ep.Setup(e => e.EpisodeNumber).Returns(number);
         ep.Setup(e => e.Type).Returns(type);
         ep.Setup(e => e.IsHidden).Returns(hidden);
-        ep.Setup(e => e.VideoList).Returns(videoCount == 0 ? [] : [Mock.Of<IVideo>()]);
+        ep.Setup(e => e.Videos).Returns(videoCount == 0 ? [] : [Mock.Of<IVideo>()]);
         ep.Setup(e => e.AirDate).Returns(airDate);
         return ep;
     }

@@ -40,7 +40,7 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
                 : [EpisodeType.Episode];
 
             var missing = series.Episodes
-                .Where(e => scannedTypes.Contains(e.Type) && !e.IsHidden && e.VideoList.Count == 0)
+                .Where(e => scannedTypes.Contains(e.Type) && !e.IsHidden && e.Videos.Count == 0)
                 .Select(e => new MissingEpisodeInfo
                 {
                     AnidbEpisodeId = e.AnidbEpisodeID,
