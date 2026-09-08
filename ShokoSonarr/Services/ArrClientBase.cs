@@ -23,6 +23,7 @@ public abstract class ArrClientBase(HttpClient httpClient)
     {
         try
         {
+            ct.ThrowIfCancellationRequested();
             using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return ArrActionResult<T>.Fail($"{ServiceName} returned {(int)response.StatusCode} {response.ReasonPhrase}");
@@ -32,6 +33,13 @@ public abstract class ArrClientBase(HttpClient httpClient)
 
             var data = await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct).ConfigureAwait(false);
             return data is null ? ArrActionResult<T>.Fail($"{ServiceName} returned an empty response body") : ArrActionResult<T>.Ok(data);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Caller cancellation (scan aborted / request dropped) must propagate. A 30s HttpClient
+            // timeout also lands here as a TaskCanceledException but with ct not signalled -- that
+            // one is a genuine call failure, so it falls through to the Fail below.
+            throw;
         }
         catch (Exception ex)
         {

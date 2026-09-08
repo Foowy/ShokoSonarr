@@ -50,6 +50,28 @@ public class SonarrClientTests
     }
 
     [Fact]
+    public async Task SendAsync_CallerCancelsToken_PropagatesInsteadOfReturningFail()
+    {
+        var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
+        var client = new SonarrClient(new HttpClient(handler));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.UnmonitorEpisodesAsync(TestSettings, [1], new CancellationToken(canceled: true)));
+    }
+
+    [Fact]
+    public async Task SendAsync_RequestTimesOutWithTokenNotCancelled_ReturnsFail()
+    {
+        // A 30s HttpClient.Timeout surfaces as TaskCanceledException with the caller's token unsignalled.
+        var handler = new FakeHandler(_ => throw new TaskCanceledException("timed out"));
+        var client = new SonarrClient(new HttpClient(handler));
+
+        var result = await client.UnmonitorEpisodesAsync(TestSettings, [1], CancellationToken.None);
+
+        Assert.False(result.Success);
+    }
+
+    [Fact]
     public async Task LookupByTvdbIdAsync_SendsCorrectQueryTerm()
     {
         var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)

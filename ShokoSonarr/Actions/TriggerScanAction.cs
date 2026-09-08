@@ -4,7 +4,7 @@ using ShokoSonarr.Services;
 namespace ShokoSonarr.Actions;
 
 /// <summary>Runs a missing-episode scan immediately and persists the result as the current dashboard snapshot. Native equivalent of the dashboard's "Run Scan" button.</summary>
-public class TriggerScanAction(MissingEpisodeScanner scanner, ScanCacheStore cacheStore) : IExecutableAction
+public class TriggerScanAction(MissingEpisodeScanner scanner) : IExecutableAction
 {
     /// <inheritdoc/>
     public string Name => "Scan for Missing Episodes";
@@ -21,7 +21,6 @@ public class TriggerScanAction(MissingEpisodeScanner scanner, ScanCacheStore cac
     /// <inheritdoc/>
     public async Task Execute(CancellationToken token = default)
     {
-        var snapshot = await scanner.ScanAsync(token).ConfigureAwait(false);
-        cacheStore.SaveScan(snapshot);
+        await scanner.ScanAsync(token).ConfigureAwait(false);
     }
 }

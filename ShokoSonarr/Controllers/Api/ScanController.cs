@@ -22,7 +22,6 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
     public async Task<IActionResult> RunScan()
     {
         var snapshot = await scanner.ScanAsync(HttpContext.RequestAborted);
-        cacheStore.SaveScan(snapshot);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }
 
@@ -37,7 +36,7 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
             return NotFound(new ApiResponse<object>(Success: false, Message: $"No Shoko series with ID {shokoSeriesId}.", Data: null));
 
         cacheStore.SetSeriesOverride(shokoSeriesId, request.IncludeSpecials);
-        var snapshot = await PatchSnapshotForSeriesAsync(shokoSeriesId);
+        var snapshot = await scanner.PatchSeriesAsync(shokoSeriesId, HttpContext.RequestAborted);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }
 
@@ -52,26 +51,8 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
             return NotFound(new ApiResponse<object>(Success: false, Message: $"No Shoko series with ID {shokoSeriesId}.", Data: null));
 
         cacheStore.SetSeriesSonarrOverride(shokoSeriesId, request.QualityProfileId, request.RootFolderPath);
-        var snapshot = await PatchSnapshotForSeriesAsync(shokoSeriesId);
+        var snapshot = await scanner.PatchSeriesAsync(shokoSeriesId, HttpContext.RequestAborted);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
-    }
-
-    /// <summary>Recomputes just the one changed series and splices it into the cached snapshot, instead of re-running the whole scan inside the request. Reconciliation is unaffected -- it runs on the next full scan.</summary>
-    private async Task<Models.ScanSnapshot> PatchSnapshotForSeriesAsync(int shokoSeriesId)
-    {
-        var updated = await scanner.ScanSeriesAsync(shokoSeriesId, HttpContext.RequestAborted);
-        var previous = cacheStore.GetLastScan();
-        var series = (previous?.Series ?? []).Where(s => s.ShokoSeriesId != shokoSeriesId).ToList();
-        if (updated is not null)
-            series.Add(updated);
-
-        var snapshot = new Models.ScanSnapshot
-        {
-            ScannedAtUtc = previous?.ScannedAtUtc ?? DateTime.UtcNow,
-            Series = [.. series.OrderByDescending(s => s.MissingEpisodes.Count)],
-        };
-        cacheStore.SaveScan(snapshot);
-        return snapshot;
     }
 
     /// <summary>Gets the most recently computed scan snapshot.</summary>

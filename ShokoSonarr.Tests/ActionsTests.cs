@@ -40,7 +40,7 @@ public class ActionsTests : IDisposable
         var metadataService = new Mock<IMetadataService>();
         metadataService.Setup(m => m.GetAllShokoSeries()).Returns([]);
         var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, MakeSonarrClient(_ => new HttpResponseMessage(HttpStatusCode.OK)), new NotificationService(new HttpClient()));
-        var action = new TriggerScanAction(scanner, _cacheStore);
+        var action = new TriggerScanAction(scanner);
 
         Assert.Null(_cacheStore.GetLastScan());
         await action.Execute();

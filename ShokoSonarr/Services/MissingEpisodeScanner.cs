@@ -14,18 +14,46 @@ public class MissingEpisodeScanner(IMetadataService metadataService, ScanCacheSt
     /// <summary>Pending entries older than this are dropped even if Sonarr keeps rejecting the unmonitor call (e.g. the Sonarr episode was deleted out-of-band), so a permanently-failing entry doesn't retry forever.</summary>
     private static readonly TimeSpan MaxPendingAge = TimeSpan.FromDays(14);
 
-    // ponytail: single global lock -- two overlapping full scans just waste work and race SaveScan.
-    // Serializing is enough; no need to cache/share the in-flight result. Revisit only if a per-series
-    // scan ever needs to run concurrently with a full scan.
+    // ponytail: single global lock -- serializes full scans and the per-series patch so their
+    // read-modify-write of the persisted snapshot can't interleave. No need to cache/share the
+    // in-flight result.
     private readonly SemaphoreSlim _scanLock = new(1, 1);
 
-    /// <summary>Runs a full scan, reconciles any pending Sonarr searches against the fresh results, and returns a snapshot of all series with at least one missing episode.</summary>
+    /// <summary>Runs a full scan, reconciles any pending Sonarr searches against the fresh results, persists the snapshot, and returns it.</summary>
     public async Task<ScanSnapshot> ScanAsync(CancellationToken ct = default)
     {
         await _scanLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            return await ScanInternalAsync(ct).ConfigureAwait(false);
+            var snapshot = await ScanInternalAsync(ct).ConfigureAwait(false);
+            cacheStore.SaveScan(snapshot);
+            return snapshot;
+        }
+        finally
+        {
+            _scanLock.Release();
+        }
+    }
+
+    /// <summary>Recomputes just the one changed series, splices it into the persisted snapshot, and re-persists — under the same lock as <see cref="ScanAsync"/> so a concurrent full scan can't clobber the patch (or vice versa). Reconciliation is unaffected; it runs only on a full scan.</summary>
+    public async Task<ScanSnapshot> PatchSeriesAsync(int shokoSeriesId, CancellationToken ct = default)
+    {
+        var updated = await ScanSeriesAsync(shokoSeriesId, ct).ConfigureAwait(false);
+        await _scanLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var previous = cacheStore.GetLastScan();
+            var series = (previous?.Series ?? []).Where(s => s.ShokoSeriesId != shokoSeriesId).ToList();
+            if (updated is not null)
+                series.Add(updated);
+
+            var snapshot = new ScanSnapshot
+            {
+                ScannedAtUtc = previous?.ScannedAtUtc ?? DateTime.UtcNow,
+                Series = [.. series.OrderByDescending(s => s.MissingEpisodes.Count)],
+            };
+            cacheStore.SaveScan(snapshot);
+            return snapshot;
         }
         finally
         {
