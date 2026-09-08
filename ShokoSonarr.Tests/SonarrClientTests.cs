@@ -84,6 +84,7 @@ public class SonarrClientTests
         Assert.False(body.RootElement.GetProperty("addOptions").GetProperty("searchForMissingEpisodes").GetBoolean());
         Assert.Equal(4, body.RootElement.GetProperty("qualityProfileId").GetInt32());
         Assert.Equal("/anime", body.RootElement.GetProperty("rootFolderPath").GetString());
+        Assert.Equal("anime", body.RootElement.GetProperty("seriesType").GetString());
     }
 
     [Fact]
