@@ -41,8 +41,9 @@ public class SonarrControllerTests : IDisposable
         var httpClient = new HttpClient(handler);
         var sonarrClient = new SonarrClient(httpClient);
         var notificationService = new NotificationService(httpClient); // no webhook configured — NotifyAsync no-ops
-        var matcher = new SeriesMatcher(sonarrClient, cacheStore, notificationService);
-        return new SonarrController(matcher, sonarrClient, cacheStore, notificationService);
+        var matcher = new SeriesMatcher(sonarrClient);
+        var searchService = new SonarrSearchService(sonarrClient, cacheStore, notificationService);
+        return new SonarrController(matcher, searchService, sonarrClient, cacheStore, notificationService);
     }
 
     private static HttpResponseMessage JsonResponse(HttpStatusCode status, object body) =>

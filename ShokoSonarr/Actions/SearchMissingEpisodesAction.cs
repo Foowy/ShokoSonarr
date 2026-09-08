@@ -9,7 +9,7 @@ namespace ShokoSonarr.Actions;
 /// Native equivalent of the dashboard's per-series "Search" button, scoped to all missing episodes rather
 /// than a hand-picked subset — for per-episode control, use the dashboard directly.
 /// </summary>
-public class SearchMissingEpisodesAction(SeriesMatcher matcher, SonarrClient sonarrClient, ScanCacheStore cacheStore) : SeriesAction
+public class SearchMissingEpisodesAction(SeriesMatcher matcher, SonarrSearchService searchService, SonarrClient sonarrClient, ScanCacheStore cacheStore) : SeriesAction
 {
     /// <inheritdoc/>
     public override string Name => "Search Missing Episodes in Sonarr";
@@ -47,7 +47,7 @@ public class SearchMissingEpisodesAction(SeriesMatcher matcher, SonarrClient son
             throw new InvalidOperationException("Series is confirmed in Sonarr's lookup but not yet added — use the ShokoSonarr dashboard to add it first.");
 
         var anidbEpisodeIds = series.MissingEpisodes.Select(e => e.AnidbEpisodeId).ToList();
-        var result = await matcher.MonitorAndSearchAsync(settings, series.ShokoSeriesId, existing.Data[0].Id, anidbEpisodeIds, series, token).ConfigureAwait(false);
+        var result = await searchService.MonitorAndSearchAsync(settings, series.ShokoSeriesId, existing.Data[0].Id, anidbEpisodeIds, series, token).ConfigureAwait(false);
         if (!result.Success)
             throw new InvalidOperationException(result.ErrorMessage);
     }

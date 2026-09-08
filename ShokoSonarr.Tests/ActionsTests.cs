@@ -64,8 +64,10 @@ public class ActionsTests : IDisposable
     [Fact]
     public async Task SearchMissingEpisodesAction_Validate_NoScanDataForSeries_ReturnsRejection()
     {
-        var matcher = new SeriesMatcher(MakeSonarrClient(_ => new HttpResponseMessage(HttpStatusCode.OK)), _cacheStore, new NotificationService(new HttpClient()));
-        var action = new SearchMissingEpisodesAction(matcher, MakeSonarrClient(_ => new HttpResponseMessage(HttpStatusCode.OK)), _cacheStore);
+        var actionClient = MakeSonarrClient(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        var matcher = new SeriesMatcher(MakeSonarrClient(_ => new HttpResponseMessage(HttpStatusCode.OK)));
+        var searchService = new SonarrSearchService(actionClient, _cacheStore, new NotificationService(new HttpClient()));
+        var action = new SearchMissingEpisodesAction(matcher, searchService, actionClient, _cacheStore);
         SetSeriesContext(action, MakeSeries(1).Object);
 
         var result = await action.Validate();
@@ -92,8 +94,9 @@ public class ActionsTests : IDisposable
         {
             Content = new StringContent("""[{"tvdbId":81797,"title":"One Piece","year":1999}]"""),
         });
-        var matcher = new SeriesMatcher(sonarrClient, _cacheStore, new NotificationService(new HttpClient()));
-        var action = new SearchMissingEpisodesAction(matcher, sonarrClient, _cacheStore);
+        var matcher = new SeriesMatcher(sonarrClient);
+        var searchService = new SonarrSearchService(sonarrClient, _cacheStore, new NotificationService(new HttpClient()));
+        var action = new SearchMissingEpisodesAction(matcher, searchService, sonarrClient, _cacheStore);
         SetSeriesContext(action, MakeSeries(1).Object);
 
         var result = await action.Validate();
@@ -109,8 +112,9 @@ public class ActionsTests : IDisposable
             Series = [new SeriesMissingResult { ShokoSeriesId = 1, Title = "Some Obscure Anime", TvdbId = null }],
         });
         var sonarrClient = MakeSonarrClient(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") });
-        var matcher = new SeriesMatcher(sonarrClient, _cacheStore, new NotificationService(new HttpClient()));
-        var action = new SearchMissingEpisodesAction(matcher, sonarrClient, _cacheStore);
+        var matcher = new SeriesMatcher(sonarrClient);
+        var searchService = new SonarrSearchService(sonarrClient, _cacheStore, new NotificationService(new HttpClient()));
+        var action = new SearchMissingEpisodesAction(matcher, searchService, sonarrClient, _cacheStore);
         SetSeriesContext(action, MakeSeries(1).Object);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => action.Execute());

@@ -28,7 +28,7 @@ public record AddDiscoveryRequest(int TvdbId, string Title);
 public record TagSyncResult(int Updated, int SkippedNoMatch, int Failed);
 
 /// <summary>Endpoints for matching Shoko series to Sonarr and triggering add/monitor/search actions.</summary>
-public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, ScanCacheStore cacheStore, NotificationService notificationService) : ShokoSonarrBaseController
+public class SonarrController(SeriesMatcher matcher, SonarrSearchService searchService, SonarrClient sonarrClient, ScanCacheStore cacheStore, NotificationService notificationService) : ShokoSonarrBaseController
 {
     /// <summary>Resolves a Sonarr match for the given Shoko series from the cached scan snapshot.</summary>
     /// <param name="shokoSeriesId">The Shoko series ID.</param>
@@ -53,7 +53,7 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
     public async Task<IActionResult> SearchTitle([FromBody] SearchTitleRequest request)
     {
         var settings = cacheStore.GetSettings();
-        var result = await matcher.SearchByTitleAsync(settings, request.Title);
+        var result = await sonarrClient.LookupByTitleAsync(settings, request.Title);
         return Ok(new ApiResponse<object>(Success: result.Success, Message: result.ErrorMessage, Data: result.Data));
     }
 
@@ -161,10 +161,10 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
         return await MonitorAndSearchAsync(settings, request.ShokoSeriesId, request.SonarrSeriesId, request.AnidbEpisodeIds, series);
     }
 
-    /// <summary>Monitors and searches for the given missing episodes on a Sonarr series, via <see cref="SeriesMatcher.MonitorAndSearchAsync"/>.</summary>
+    /// <summary>Monitors and searches for the given missing episodes on a Sonarr series, via <see cref="SonarrSearchService.MonitorAndSearchAsync"/>.</summary>
     private async Task<IActionResult> MonitorAndSearchAsync(Config.SonarrSettings settings, int shokoSeriesId, int sonarrSeriesId, List<int> anidbEpisodeIds, Models.SeriesMissingResult series)
     {
-        var result = await matcher.MonitorAndSearchAsync(settings, shokoSeriesId, sonarrSeriesId, anidbEpisodeIds, series);
+        var result = await searchService.MonitorAndSearchAsync(settings, shokoSeriesId, sonarrSeriesId, anidbEpisodeIds, series);
         if (!result.Success)
             return Conflict(new ApiResponse<object>(Success: false, Message: result.ErrorMessage, Data: null));
 

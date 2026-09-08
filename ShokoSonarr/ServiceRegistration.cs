@@ -28,6 +28,7 @@ public class ServiceRegistration : IPluginServiceRegistration
         serviceCollection.AddSingleton<SonarrClient>();
         serviceCollection.AddSingleton<RadarrClient>();
         serviceCollection.AddSingleton<SeriesMatcher>();
+        serviceCollection.AddSingleton<SonarrSearchService>();
         serviceCollection.AddSingleton<NotificationService>();
         serviceCollection.AddSingleton<RelatedSeriesFinder>();
         serviceCollection.AddHostedService<ScanSchedulerService>();
