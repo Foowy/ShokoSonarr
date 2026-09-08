@@ -161,82 +161,13 @@ public class SonarrController(SeriesMatcher matcher, SonarrClient sonarrClient, 
         return await MonitorAndSearchAsync(settings, request.ShokoSeriesId, request.SonarrSeriesId, request.AnidbEpisodeIds, series);
     }
 
-    /// <summary>
-    /// Monitors and searches for the given missing episodes on a Sonarr series.
-    /// </summary>
-    /// <remarks>
-    /// v1 limitation: AniDB episode numbers are mapped to Sonarr season/episode numbers by assuming a single
-    /// season of normal episodes (Sonarr season 1) plus specials (Sonarr season 0). TVDB series that split
-    /// this same AniDB run across multiple Sonarr seasons are not handled and may cause the wrong episode to
-    /// be searched. Full multi-season mapping is a known v2 improvement.
-    /// </remarks>
+    /// <summary>Monitors and searches for the given missing episodes on a Sonarr series, via <see cref="SeriesMatcher.MonitorAndSearchAsync"/>.</summary>
     private async Task<IActionResult> MonitorAndSearchAsync(Config.SonarrSettings settings, int shokoSeriesId, int sonarrSeriesId, List<int> anidbEpisodeIds, Models.SeriesMissingResult series)
     {
-        var episodesResult = await sonarrClient.GetEpisodesAsync(settings, sonarrSeriesId);
-        if (!episodesResult.Success)
-            return Conflict(new ApiResponse<object>(Success: false, Message: episodesResult.ErrorMessage, Data: null));
+        var result = await matcher.MonitorAndSearchAsync(settings, shokoSeriesId, sonarrSeriesId, anidbEpisodeIds, series);
+        if (!result.Success)
+            return Conflict(new ApiResponse<object>(Success: false, Message: result.ErrorMessage, Data: null));
 
-        // Normal episodes map to Sonarr season 1+; specials map to Sonarr's season 0.
-        var targetEpisodes = series.MissingEpisodes.Where(e => anidbEpisodeIds.Contains(e.AnidbEpisodeId)).ToList();
-        var sonarrEpisodeIds = new List<int>();
-        var sonarrEpisodeIdByAnidbId = new Dictionary<int, int>();
-        var unmappedIds = new List<int>();
-        var unmappedTitles = new List<string>();
-        foreach (var ep in targetEpisodes)
-        {
-            var seasonNumber = ep.IsSpecial ? 0 : 1;
-            var match = episodesResult.Data!.Find(se => se.SeasonNumber == seasonNumber && se.EpisodeNumber == ep.EpisodeNumber);
-            if (match is null)
-            {
-                unmappedIds.Add(ep.AnidbEpisodeId);
-                unmappedTitles.Add(ep.Title);
-            }
-            else
-            {
-                sonarrEpisodeIds.Add(match.Id);
-                sonarrEpisodeIdByAnidbId[ep.AnidbEpisodeId] = match.Id;
-            }
-        }
-
-        if (sonarrEpisodeIds.Count == 0)
-            return BadRequest(new ApiResponse<object>(Success: false, Message: $"No episodes could be mapped to Sonarr. Unmapped: {string.Join(", ", unmappedTitles)}", Data: null));
-
-        var monitorResult = await sonarrClient.MonitorEpisodesAsync(settings, sonarrEpisodeIds);
-        if (!monitorResult.Success)
-            return Conflict(new ApiResponse<object>(Success: false, Message: monitorResult.ErrorMessage, Data: null));
-
-        var searchResult = await sonarrClient.TriggerEpisodeSearchAsync(settings, sonarrEpisodeIds);
-        if (!searchResult.Success)
-            return Conflict(new ApiResponse<object>(Success: false, Message: searchResult.ErrorMessage, Data: null));
-
-        var triggeredAt = DateTime.UtcNow;
-        foreach (var ep in targetEpisodes.Where(e => !unmappedIds.Contains(e.AnidbEpisodeId)))
-        {
-            cacheStore.AddPendingSearch(new Models.PendingSearch
-            {
-                ShokoSeriesId = shokoSeriesId,
-                SeriesTitle = series.Title,
-                AnidbEpisodeId = ep.AnidbEpisodeId,
-                EpisodeTitle = ep.Title,
-                SonarrSeriesId = sonarrSeriesId,
-                SonarrEpisodeId = sonarrEpisodeIdByAnidbId[ep.AnidbEpisodeId],
-                TriggeredAtUtc = triggeredAt,
-            });
-            cacheStore.AddHistoryEntry(new Models.SearchHistoryEntry
-            {
-                ShokoSeriesId = shokoSeriesId,
-                SeriesTitle = series.Title,
-                AnidbEpisodeId = ep.AnidbEpisodeId,
-                EpisodeTitle = ep.Title,
-                Outcome = Models.SearchHistoryOutcome.Triggered,
-                TimestampUtc = triggeredAt,
-            });
-        }
-
-        var triggeredCount = targetEpisodes.Count - unmappedIds.Count;
-        await notificationService.NotifyAsync(settings, $"Triggered Sonarr search for {triggeredCount} episode(s) of **{series.Title}**");
-
-        var message = unmappedTitles.Count > 0 ? $"Search triggered. Unmapped episodes skipped: {string.Join(", ", unmappedTitles)}" : null;
-        return Ok(new ApiResponse<object>(Success: true, Message: message, Data: null));
+        return Ok(new ApiResponse<object>(Success: true, Message: result.Data, Data: null));
     }
 }
