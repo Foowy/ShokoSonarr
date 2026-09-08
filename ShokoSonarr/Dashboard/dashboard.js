@@ -1,5 +1,11 @@
 const API_BASE = window.location.pathname.replace(/\/dashboard.*$/, '').replace('/api/plugin/ShokoSonarr', '/api/v1.0/ShokoSonarr');
 
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 const THEME_STORAGE_KEY = 'shoko-sonarr-theme';
 const systemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -125,7 +131,7 @@ function renderSeries(snapshot) {
       const epRow = document.createElement('div');
       epRow.className = 'episode-row';
       const code = ep.IsSpecial ? `S${ep.EpisodeNumber}` : `E${ep.EpisodeNumber}`;
-      epRow.innerHTML = `<span><span class="ep-code">${code}</span><span class="ep-title">${ep.Title || '(untitled)'}</span></span><span class="status ${ep.ActionStatus}">${ep.ActionStatus}</span>`;
+      epRow.innerHTML = `<span><span class="ep-code">${escapeHtml(code)}</span><span class="ep-title">${escapeHtml(ep.Title || '(untitled)')}</span></span><span class="status ${escapeHtml(ep.ActionStatus)}">${escapeHtml(ep.ActionStatus)}</span>`;
       episodesDiv.appendChild(epRow);
     }
     row.appendChild(episodesDiv);
@@ -537,7 +543,10 @@ function renderSuggestions(suggestions) {
     row.className = 'suggestion-row';
 
     const text = document.createElement('div');
-    text.innerHTML = `Because you have <strong>${s.OwningSeriesTitle}</strong>, you're missing its <strong>${s.RelationType}</strong>: <em>${s.RelatedTitle}</em>`;
+    const owning = document.createElement('strong'); owning.textContent = s.OwningSeriesTitle;
+    const relType = document.createElement('strong'); relType.textContent = s.RelationType;
+    const related = document.createElement('em'); related.textContent = s.RelatedTitle;
+    text.append('Because you have ', owning, ", you're missing its ", relType, ': ', related);
     row.appendChild(text);
 
     const addBtn = document.createElement('button');

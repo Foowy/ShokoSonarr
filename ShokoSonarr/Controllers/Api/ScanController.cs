@@ -21,15 +21,14 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
     [HttpPost]
     public async Task<IActionResult> RunScan()
     {
-        var snapshot = await scanner.ScanAsync();
-        cacheStore.SaveScan(snapshot);
+        var snapshot = await scanner.ScanAsync(HttpContext.RequestAborted);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }
 
-    /// <summary>Sets (or clears) a series' specials override, then re-runs the scan so the dashboard reflects it immediately.</summary>
+    /// <summary>Sets (or clears) a series' specials override, then recomputes just that series in the cached snapshot.</summary>
     /// <param name="shokoSeriesId">The Shoko series ID.</param>
     /// <param name="request">The override to set.</param>
-    /// <returns>The freshly computed scan snapshot.</returns>
+    /// <returns>The patched scan snapshot.</returns>
     [HttpPut("series/{shokoSeriesId:int}/include-specials")]
     public async Task<IActionResult> SetSeriesSpecials(int shokoSeriesId, [FromBody] SetSeriesSpecialsRequest request)
     {
@@ -37,15 +36,14 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
             return NotFound(new ApiResponse<object>(Success: false, Message: $"No Shoko series with ID {shokoSeriesId}.", Data: null));
 
         cacheStore.SetSeriesOverride(shokoSeriesId, request.IncludeSpecials);
-        var snapshot = await scanner.ScanAsync();
-        cacheStore.SaveScan(snapshot);
+        var snapshot = await scanner.PatchSeriesAsync(shokoSeriesId, HttpContext.RequestAborted);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }
 
-    /// <summary>Sets (or clears) a series' Sonarr quality-profile/root-folder override, then re-runs the scan so the dashboard reflects it immediately.</summary>
+    /// <summary>Sets (or clears) a series' Sonarr quality-profile/root-folder override, then recomputes just that series in the cached snapshot.</summary>
     /// <param name="shokoSeriesId">The Shoko series ID.</param>
     /// <param name="request">The override to set.</param>
-    /// <returns>The freshly computed scan snapshot.</returns>
+    /// <returns>The patched scan snapshot.</returns>
     [HttpPut("series/{shokoSeriesId:int}/sonarr-override")]
     public async Task<IActionResult> SetSeriesSonarrOverride(int shokoSeriesId, [FromBody] SetSeriesSonarrOverrideRequest request)
     {
@@ -53,8 +51,7 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
             return NotFound(new ApiResponse<object>(Success: false, Message: $"No Shoko series with ID {shokoSeriesId}.", Data: null));
 
         cacheStore.SetSeriesSonarrOverride(shokoSeriesId, request.QualityProfileId, request.RootFolderPath);
-        var snapshot = await scanner.ScanAsync();
-        cacheStore.SaveScan(snapshot);
+        var snapshot = await scanner.PatchSeriesAsync(shokoSeriesId, HttpContext.RequestAborted);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }
 

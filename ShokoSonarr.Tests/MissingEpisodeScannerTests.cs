@@ -46,7 +46,7 @@ public class MissingEpisodeScannerTests : IDisposable
         ep.Setup(e => e.EpisodeNumber).Returns(number);
         ep.Setup(e => e.Type).Returns(type);
         ep.Setup(e => e.IsHidden).Returns(hidden);
-        ep.Setup(e => e.VideoList).Returns(videoCount == 0 ? [] : [Mock.Of<IVideo>()]);
+        ep.Setup(e => e.Videos).Returns(videoCount == 0 ? [] : [Mock.Of<IVideo>()]);
         ep.Setup(e => e.AirDate).Returns(airDate);
         return ep;
     }
@@ -467,13 +467,17 @@ public class MissingEpisodeScannerTests : IDisposable
 
         Assert.Empty(_cacheStore.GetPendingSearches());
         Assert.Single(handler.Requests);
+
+        var history = _cacheStore.GetHistory();
+        Assert.Single(history);
+        Assert.Equal(SearchHistoryOutcome.Descoped, history[0].Outcome);
     }
 
     private class ThrowingSonarrClient : SonarrClient
     {
         public ThrowingSonarrClient() : base(new HttpClient()) { }
 
-        public override Task<Models.SonarrActionResult<bool>> UnmonitorEpisodesAsync(Config.SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default) =>
+        public override Task<Models.ArrActionResult<bool>> UnmonitorEpisodesAsync(Config.SonarrSettings settings, List<int> sonarrEpisodeIds, CancellationToken ct = default) =>
             throw new InvalidOperationException("boom");
     }
 
@@ -552,5 +556,123 @@ public class MissingEpisodeScannerTests : IDisposable
 
         Assert.Null(exception);
         Assert.Single(_cacheStore.GetPendingSearches());
+    }
+
+    [Fact]
+    public async Task Scan_AlreadyCancelledToken_ThrowsWithoutEnumeratingSeries()
+    {
+        var metadataService = new Mock<IMetadataService>(MockBehavior.Strict);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => scanner.ScanAsync(new CancellationToken(canceled: true)));
+    }
+
+    [Fact]
+    public async Task Scan_TwoConcurrentCalls_DoNotOverlap()
+    {
+        var inFlight = 0;
+        var maxObserved = 0;
+
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(80);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+        series.Setup(s => s.Episodes).Returns([]);
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetAllShokoSeries()).Returns(() =>
+        {
+            var n = Interlocked.Increment(ref inFlight);
+            maxObserved = Math.Max(maxObserved, n);
+            Thread.Sleep(50);
+            Interlocked.Decrement(ref inFlight);
+            return [series.Object];
+        });
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        await Task.WhenAll(scanner.ScanAsync(), scanner.ScanAsync());
+
+        Assert.Equal(1, maxObserved);
+    }
+
+    [Fact]
+    public async Task ScanSeriesAsync_SingleSeries_ReturnsThatSeriesResultOnly()
+    {
+        var missingEp = MakeEpisode(anidbId: 7101, number: 3, type: EpisodeType.Episode, hidden: false, videoCount: 0);
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(90);
+        series.Setup(s => s.Title).Returns("Solo Series");
+        series.Setup(s => s.Episodes).Returns([missingEp.Object]);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetShokoSeriesByID(90)).Returns(series.Object);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        var result = await scanner.ScanSeriesAsync(90);
+
+        Assert.NotNull(result);
+        Assert.Equal(90, result!.ShokoSeriesId);
+        Assert.Single(result.MissingEpisodes);
+        Assert.Equal(3, result.MissingEpisodes[0].EpisodeNumber);
+        metadataService.Verify(m => m.GetAllShokoSeries(), Times.Never);
+    }
+
+    [Fact]
+    public async Task ScanSeriesAsync_SeriesWithNothingMissing_ReturnsNull()
+    {
+        var series = new Mock<IShokoSeries>();
+        series.Setup(s => s.ID).Returns(91);
+        series.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+        series.Setup(s => s.Episodes).Returns([]);
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetShokoSeriesByID(91)).Returns(series.Object);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+
+        Assert.Null(await scanner.ScanSeriesAsync(91));
+    }
+
+    [Fact]
+    public async Task ScanSeriesAsync_UnknownSeries_ReturnsNull()
+    {
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetShokoSeriesByID(999)).Returns((IShokoSeries?)null);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+
+        Assert.Null(await scanner.ScanSeriesAsync(999));
+    }
+
+    [Fact]
+    public async Task PatchSeriesAsync_SplicesSeriesIntoPersistedSnapshot_PreservingTimestampAndOtherSeries()
+    {
+        _cacheStore.SaveScan(new ScanSnapshot
+        {
+            ScannedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            Series = [new SeriesMissingResult { ShokoSeriesId = 1, Title = "Untouched", MissingEpisodes = [new MissingEpisodeInfo { AnidbEpisodeId = 11, EpisodeNumber = 1 }] }],
+        });
+
+        var missingEp = MakeEpisode(anidbId: 7300, number: 2, type: EpisodeType.Episode, hidden: false, videoCount: 0);
+        var target = new Mock<IShokoSeries>();
+        target.Setup(s => s.ID).Returns(2);
+        target.Setup(s => s.Title).Returns("Target");
+        target.Setup(s => s.Episodes).Returns([missingEp.Object]);
+        target.Setup(s => s.LocalEpisodeCounts).Returns(new EpisodeCounts { Episodes = 1 });
+
+        var metadataService = new Mock<IMetadataService>();
+        metadataService.Setup(m => m.GetShokoSeriesByID(2)).Returns(target.Object);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+        var snapshot = await scanner.PatchSeriesAsync(2);
+
+        Assert.Equal(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), snapshot.ScannedAtUtc);
+        Assert.Contains(snapshot.Series, s => s.ShokoSeriesId == 1);
+        Assert.Contains(snapshot.Series, s => s.ShokoSeriesId == 2);
+        // Persisted, not just returned.
+        Assert.Equal(2, _cacheStore.GetLastScan()!.Series.Count);
+        metadataService.Verify(m => m.GetAllShokoSeries(), Times.Never);
     }
 }

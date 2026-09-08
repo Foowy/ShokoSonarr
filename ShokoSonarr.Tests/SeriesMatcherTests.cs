@@ -19,12 +19,7 @@ public class SeriesMatcherTests
     private static SonarrClient MakeClient(Func<HttpRequestMessage, HttpResponseMessage> respond) =>
         new(new HttpClient(new FakeHandler(respond)));
 
-    private static SeriesMatcher MakeMatcher(SonarrClient client)
-    {
-        var cacheStore = new ScanCacheStore(Path.Combine(Path.GetTempPath(), "shoko-sonarr-tests-" + Guid.NewGuid()));
-        var notificationService = new NotificationService(new HttpClient(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK))));
-        return new SeriesMatcher(client, cacheStore, notificationService);
-    }
+    private static SeriesMatcher MakeMatcher(SonarrClient client) => new(client);
 
     [Fact]
     public async Task ResolveAsync_SeriesWithKnownTvdbId_AutoResolvesWhenSonarrConfirms()

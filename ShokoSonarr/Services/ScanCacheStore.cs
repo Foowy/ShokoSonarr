@@ -134,10 +134,13 @@ public class ScanCacheStore : IDisposable
     }
 
     /// <summary>Appends a search-history entry, trimming the oldest entries once <see cref="MaxHistoryEntries"/> is exceeded.</summary>
-    public void AddHistoryEntry(SearchHistoryEntry entry)
+    public void AddHistoryEntry(SearchHistoryEntry entry) => AddHistoryEntries([entry]);
+
+    /// <summary>Appends one or more search-history entries, trimming the oldest down to <see cref="MaxHistoryEntries"/> once after the whole batch is inserted, not once per entry.</summary>
+    public void AddHistoryEntries(IEnumerable<SearchHistoryEntry> entries)
     {
         var col = _db.GetCollection<SearchHistoryEntry>(SearchHistoryCollectionName);
-        col.Insert(entry);
+        col.InsertBulk(entries);
 
         var overflow = col.Count() - MaxHistoryEntries;
         if (overflow > 0)
