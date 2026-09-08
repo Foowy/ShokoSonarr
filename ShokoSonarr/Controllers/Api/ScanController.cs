@@ -21,7 +21,7 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
     [HttpPost]
     public async Task<IActionResult> RunScan()
     {
-        var snapshot = await scanner.ScanAsync();
+        var snapshot = await scanner.ScanAsync(HttpContext.RequestAborted);
         cacheStore.SaveScan(snapshot);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }
@@ -37,7 +37,7 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
             return NotFound(new ApiResponse<object>(Success: false, Message: $"No Shoko series with ID {shokoSeriesId}.", Data: null));
 
         cacheStore.SetSeriesOverride(shokoSeriesId, request.IncludeSpecials);
-        var snapshot = await scanner.ScanAsync();
+        var snapshot = await scanner.ScanAsync(HttpContext.RequestAborted);
         cacheStore.SaveScan(snapshot);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }
@@ -53,7 +53,7 @@ public class ScanController(MissingEpisodeScanner scanner, ScanCacheStore cacheS
             return NotFound(new ApiResponse<object>(Success: false, Message: $"No Shoko series with ID {shokoSeriesId}.", Data: null));
 
         cacheStore.SetSeriesSonarrOverride(shokoSeriesId, request.QualityProfileId, request.RootFolderPath);
-        var snapshot = await scanner.ScanAsync();
+        var snapshot = await scanner.ScanAsync(HttpContext.RequestAborted);
         cacheStore.SaveScan(snapshot);
         return Ok(new ApiResponse<object>(Success: true, Message: null, Data: snapshot));
     }

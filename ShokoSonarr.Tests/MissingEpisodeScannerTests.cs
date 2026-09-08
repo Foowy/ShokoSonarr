@@ -553,4 +553,15 @@ public class MissingEpisodeScannerTests : IDisposable
         Assert.Null(exception);
         Assert.Single(_cacheStore.GetPendingSearches());
     }
+
+    [Fact]
+    public async Task Scan_AlreadyCancelledToken_ThrowsWithoutEnumeratingSeries()
+    {
+        var metadataService = new Mock<IMetadataService>(MockBehavior.Strict);
+
+        var scanner = new MissingEpisodeScanner(metadataService.Object, _cacheStore, new SonarrClient(new HttpClient()), new NotificationService(new HttpClient()));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => scanner.ScanAsync(new CancellationToken(canceled: true)));
+    }
 }

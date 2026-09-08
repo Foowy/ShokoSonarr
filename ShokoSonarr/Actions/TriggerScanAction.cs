@@ -21,7 +21,7 @@ public class TriggerScanAction(MissingEpisodeScanner scanner, ScanCacheStore cac
     /// <inheritdoc/>
     public async Task Execute(CancellationToken token = default)
     {
-        var snapshot = await scanner.ScanAsync().ConfigureAwait(false);
+        var snapshot = await scanner.ScanAsync(token).ConfigureAwait(false);
         cacheStore.SaveScan(snapshot);
     }
 }
